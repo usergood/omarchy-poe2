@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "usergood.poe2",
+  "name": "PoE 2",
+  "version": "1.0.0",
+  "author": "usergood",
+  "license": "MIT",
+  "description": "Steam PoE 2 launcher, reversible OptiScaler FSR4 profiles, Scalpel, updates and trade access",
+  "kinds": ["bar-widget"],
+  "entryPoints": {"barWidget": "Panel.qml"},
+  "barWidget": {"displayName": "PoE 2", "description": "Play, trade, price check and manage FSR4", "category": "Gaming", "allowMultiple": false, "defaultSection": "right"}
+}
