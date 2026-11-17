@@ -149,6 +149,27 @@ class Manager:
             return {'available': True, 'source': 'system', 'version': version, 'path': command}
         return {'available': False, 'source': 'none', 'version': ''}
 
+    def scalpel_config(self):
+        return Path(os.environ.get('XDG_CONFIG_HOME') or self.home / '.config') / 'scalpel/config.json'
+
+    def scalpel_setup(self):
+        """Read Scalpel's own onboarding state; installed/running is not ready."""
+        try:
+            with self.scalpel_config().open('rb') as source:
+                raw = source.read(4 * 1024 * 1024 + 1)
+            if len(raw) > 4 * 1024 * 1024:
+                return 'unknown'
+            config = json.loads(raw)
+            if not isinstance(config, dict):
+                return 'unknown'
+        except FileNotFoundError:
+            return 'required'
+        except (OSError, ValueError, UnicodeError):
+            return 'unknown'
+        if config.get('onboardingCompleted') is not True:
+            return 'required'
+        return 'ready' if type(config.get('poeVersion')) is int and config['poeVersion'] == 2 else 'wrong_game'
+
     def status(self):
         info = self.info()
         profile, detail = self.health(info)
@@ -185,10 +206,11 @@ class Manager:
         if not checks['hyprland']:
             warnings.append('The bar widget is designed for Omarchy on Hyprland.')
         state = self.state or {}
+        scalpel = dict(self.scalpel(), setup=self.scalpel_setup())
         result = {'ok': True, 'addon_version': __version__, 'profile': profile, 'selected': state.get('mode', 'original'),
                   'detail': detail, 'running': steam.processes(), 'game_installed': bool(info and info['installed']),
                   'build': info['build'] if info else '', 'proton': proton, 'mesa': driver, 'configured': bool(self.state), 'can_rollback': (self.root / 'rollback.json').exists(),
-                  'optiscaler': state.get('release', {}).get('tag', ''), 'scalpel': self.scalpel(),
+                  'optiscaler': state.get('release', {}).get('tag', ''), 'scalpel': scalpel,
                   'preferences': self.preferences, 'checks': checks, 'warnings': warnings,
                   'updates': load(self.root / 'updates.json', {}), 'recovery': (self.root / 'transaction.json').exists()}
         self.save_cache()
@@ -415,15 +437,16 @@ class Manager:
         self.hash_cache = {}
         return self.status()
 
-    def launch_scalpel(self):
-        if 'scalpel' in steam.processes():
+    def launch_scalpel(self, *, focus=False):
+        running = 'scalpel' in steam.processes()
+        if running and not focus:
             return 'Scalpel is already running.'
         info = self.scalpel()
         if not info['available']:
             raise AddonError('Install Scalpel with the addon or install scalpel-poe-bin first.')
         # Preserve existing preferences; seed PoE 2-only defaults on clean machines.
-        config = self.home / '.config/scalpel/config.json'
-        if not config.exists():
+        config = self.scalpel_config()
+        if not running and not config.exists():
             atomic(config, json_bytes({'poeVersion': 2, 'onboardingSelectedGames': {'poe1': False, 'poe2': True}}))
         env = dict(os.environ, XDG_SESSION_TYPE='x11')
         # This applies only to the Electron app; never to Steam or the desktop session.
@@ -433,6 +456,9 @@ class Manager:
             os.replace(log, self.root / 'scalpel-launch.previous.log')
         with log.open('ab') as output:
             subprocess.Popen(command, env=env, stdout=output, stderr=output, start_new_session=True)
+        # Upstream's single-instance handler shows the window on a second launch.
+        if running:
+            return 'Scalpel window requested.'
         return 'Scalpel launch requested.'
 
     def launch_game(self):
@@ -449,6 +475,9 @@ class Manager:
         message = ''
         if self.preferences['auto_scalpel']:
             if self.scalpel()['available']:
+                if self.scalpel_setup() != 'ready':
+                    self.launch_scalpel(focus=True)
+                    return 'Complete setup in Scalpel and select PoE 2, then click Launch PoE 2 again. The game has not been launched.'
                 self.launch_scalpel()
             else:
                 message = ' Scalpel is not installed; the game will start without it.'

@@ -51,10 +51,13 @@ class Fixture(unittest.TestCase):
         self.config.write_bytes(CONFIG)
         self.data = self.root/'data'
         self.manager = Manager(self.data,self.home)
+        self.config_home = patch.dict(os.environ, {'XDG_CONFIG_HOME': str(self.home / '.config')})
+        self.config_home.start()
         self.closed = patch('poe2.steam.processes',return_value=[])
         self.closed.start()
 
     def tearDown(self):
+        self.config_home.stop()
         self.closed.stop()
         self.temp.cleanup()
 
@@ -151,6 +154,22 @@ class ManagerTests(Fixture):
         self.manager.switch('original')
         self.assertEqual((self.game/'libxess.dll').read_bytes(),b'new Steam version')
 
+    def test_updated_original_profile_repairs_offline_without_enabling_fsr4(self):
+        self.install()
+        self.manager.switch('original')
+        self.build('101')
+        self.assertEqual(self.manager.status()['profile'], 'needs_repair')
+        with patch('poe2.releases.latest', side_effect=AssertionError('Repair must not download')):
+            with patch('poe2.steam.processes', return_value=['steam']):
+                with self.assertRaisesRegex(AddonError, 'fully exit Steam'):
+                    self.manager.repair()
+            result = self.manager.repair()
+        self.assertEqual(result['profile'], 'original')
+        self.assertEqual(result['selected'], 'original')
+        self.assertEqual(self.manager.state['build'], '101')
+        self.assertFalse((self.game/'dxgi.dll').exists())
+        self.assertEqual(steam.display_read(self.config.read_bytes()), steam.display_read(CONFIG))
+
     def test_missing_mod_file_is_repaired_without_a_download(self):
         self.install()
         (self.game/'amd_fidelityfx_upscaler_dx12.dll').unlink()
@@ -216,6 +235,35 @@ class ManagerTests(Fixture):
         self.assertEqual(steam.display_read(self.config.read_bytes())['upscale_quality'],'Balanced')
         self.assertIn('Fsr4EnableWatermark=false',(self.game/'OptiScaler.ini').read_text())
 
+    def test_menu_shortcut_is_applied_and_persists_across_profiles(self):
+        self.install()
+        self.assertIn('ShortcutKey=0xDC', (self.game/'OptiScaler.ini').read_text())
+        self.manager.configure({'menu_key': '0x79'})
+        self.assertIn('ShortcutKey=0x79', (self.game/'OptiScaler.ini').read_text())
+        manager = Manager(self.data, self.home)
+        self.assertEqual(manager.preferences['menu_key'], '0x79')
+        manager.switch('original')
+        manager.switch('fsr4')
+        self.assertIn('ShortcutKey=0x79', (self.game/'OptiScaler.ini').read_text())
+
+    def test_menu_shortcut_change_is_blocked_while_steam_runs(self):
+        self.install()
+        before = (self.game/'OptiScaler.ini').read_bytes()
+        with patch('poe2.steam.processes', return_value=['steam']):
+            with self.assertRaises(AddonError):
+                self.manager.configure({'menu_key': '0x79'})
+        self.assertEqual((self.game/'OptiScaler.ini').read_bytes(), before)
+        self.assertEqual(load(self.manager.preferences_path)['menu_key'], '0xDC')
+
+    def test_invalid_shortcut_values_are_rejected_before_writes(self):
+        self.install()
+        before = (self.game/'OptiScaler.ini').read_bytes()
+        for value in ['§', 'F10', '0x100', '0xGG']:
+            with self.subTest(value=value), self.assertRaises(AddonError):
+                self.manager.configure({'menu_key': value})
+        self.assertEqual((self.game/'OptiScaler.ini').read_bytes(), before)
+        self.assertEqual(load(self.manager.preferences_path)['menu_key'], '0xDC')
+
     def test_failed_write_rolls_back_files_and_registry(self):
         self.install()
         paths=[self.game/'dxgi.dll',self.game/'libxess.dll',self.config,self.local,self.manager.state_path]
@@ -254,6 +302,104 @@ class ManagerTests(Fixture):
             self.assertEqual(args[0],['/usr/bin/scalpel-poe','--ozone-platform=x11'])
             self.assertEqual(kwargs['env']['XDG_SESSION_TYPE'],'x11')
             self.assertNotIn('shell',kwargs)
+
+
+class ScalpelTests(Fixture):
+    def setUp(self):
+        super().setUp()
+        self.scalpel_info = patch.object(self.manager, 'scalpel', return_value={
+            'available': True, 'path': '/usr/bin/scalpel-poe', 'version': 'test'})
+        self.scalpel_info.start()
+        self.addCleanup(self.scalpel_info.stop)
+
+    def settings(self, data):
+        atomic(self.manager.scalpel_config(), json_bytes(data))
+
+    def test_status_requires_actual_onboarding_and_poe2(self):
+        self.assertEqual(self.manager.status()['scalpel']['setup'], 'required')
+        for config, expected in [
+            ({'poeVersion': 2}, 'required'),
+            ({'onboardingCompleted': False, 'poeVersion': 2}, 'required'),
+            ({'onboardingCompleted': True, 'poeVersion': 1}, 'wrong_game'),
+            ({'onboardingCompleted': True, 'poeVersion': '2'}, 'wrong_game'),
+            ({'onboardingCompleted': True, 'poeVersion': 2}, 'ready'),
+        ]:
+            with self.subTest(config=config):
+                self.settings(config)
+                self.assertEqual(self.manager.status()['scalpel']['setup'], expected)
+
+    def test_first_play_opens_only_scalpel_and_does_not_claim_setup_complete(self):
+        with patch('poe2.manager.subprocess.Popen') as launch, patch('poe2.manager.shutil.which', return_value='/usr/bin/steam'):
+            message = self.manager.launch_game()
+        self.assertEqual(launch.call_count, 1)
+        self.assertEqual(launch.call_args.args[0], ['/usr/bin/scalpel-poe', '--ozone-platform=x11'])
+        self.assertIn('game has not been launched', message)
+        self.assertEqual(load(self.manager.scalpel_config()), {
+            'poeVersion': 2, 'onboardingSelectedGames': {'poe1': False, 'poe2': True}})
+        self.assertEqual(self.manager.scalpel_setup(), 'required')
+
+    def test_incomplete_and_wrong_game_settings_are_preserved_and_block_game(self):
+        for config in [
+            {'onboardingCompleted': False, 'poeVersion': 2, 'onboardingStep': 'trade'},
+            {'onboardingCompleted': True, 'poeVersion': 1, 'hotkey': 'Ctrl+D'},
+        ]:
+            with self.subTest(config=config):
+                self.settings(config)
+                before = self.manager.scalpel_config().read_bytes()
+                with patch('poe2.manager.subprocess.Popen') as launch, patch('poe2.manager.shutil.which', return_value='/usr/bin/steam'):
+                    self.manager.launch_game()
+                self.assertEqual(launch.call_count, 1)
+                self.assertEqual(launch.call_args.args[0][0], '/usr/bin/scalpel-poe')
+                self.assertEqual(self.manager.scalpel_config().read_bytes(), before)
+
+    def test_unreadable_settings_do_not_break_status_or_get_overwritten(self):
+        for raw in [b'{unfinished', b'[]', b'null', b'\xff', b'x' * (4 * 1024 * 1024 + 1)]:
+            with self.subTest(raw=raw[:20]):
+                atomic(self.manager.scalpel_config(), raw)
+                self.assertEqual(self.manager.status()['scalpel']['setup'], 'unknown')
+                with patch('poe2.manager.subprocess.Popen') as launch, patch('poe2.manager.shutil.which', return_value='/usr/bin/steam'):
+                    self.manager.launch_game()
+                self.assertEqual(launch.call_count, 1)
+                self.assertEqual(launch.call_args.args[0][0], '/usr/bin/scalpel-poe')
+                self.assertEqual(self.manager.scalpel_config().read_bytes(), raw)
+
+    def test_completed_setup_starts_scalpel_before_steam(self):
+        self.settings({'onboardingCompleted': True, 'poeVersion': 2})
+        with patch('poe2.manager.subprocess.Popen') as launch, patch('poe2.manager.shutil.which', return_value='/usr/bin/steam'):
+            self.manager.launch_game()
+        self.assertEqual([c.args[0] for c in launch.call_args_list], [
+            ['/usr/bin/scalpel-poe', '--ozone-platform=x11'], ['steam', '-applaunch', steam.APPID]])
+
+    def test_running_completed_scalpel_is_not_started_twice(self):
+        self.settings({'onboardingCompleted': True, 'poeVersion': 2})
+        with patch('poe2.steam.processes', return_value=['scalpel']), patch('poe2.manager.subprocess.Popen') as launch, patch('poe2.manager.shutil.which', return_value='/usr/bin/steam'):
+            self.manager.launch_game()
+        launch.assert_called_once_with(['steam', '-applaunch', steam.APPID],
+                                      stdout=-3, stderr=-3, start_new_session=True)
+
+    def test_running_incomplete_scalpel_can_be_raised_for_setup(self):
+        self.settings({'onboardingCompleted': False, 'poeVersion': 2})
+        with patch('poe2.steam.processes', return_value=['scalpel']), patch('poe2.manager.subprocess.Popen') as launch, patch('poe2.manager.shutil.which', return_value='/usr/bin/steam'):
+            self.manager.launch_game()
+        self.assertEqual(launch.call_count, 1)
+        self.assertEqual(launch.call_args.args[0][0], '/usr/bin/scalpel-poe')
+
+    def test_scalpel_remains_optional(self):
+        for available, automatic in [(False, True), (True, False)]:
+            with self.subTest(available=available, automatic=automatic):
+                self.manager.preferences['auto_scalpel'] = automatic
+                with patch.object(self.manager, 'scalpel', return_value={'available': available}), patch('poe2.manager.subprocess.Popen') as launch, patch('poe2.manager.shutil.which', return_value='/usr/bin/steam'):
+                    self.manager.launch_game()
+                self.assertEqual(launch.call_count, 1)
+                self.assertEqual(launch.call_args.args[0], ['steam', '-applaunch', steam.APPID])
+                self.assertFalse(self.manager.scalpel_config().exists())
+
+    def test_launch_uses_xdg_config_home(self):
+        with patch.dict(os.environ, {'XDG_CONFIG_HOME': str(self.root / 'alternate-config')}):
+            with patch('poe2.manager.subprocess.Popen'):
+                self.manager.launch_scalpel()
+            self.assertTrue((self.root / 'alternate-config/scalpel/config.json').exists())
+        self.assertFalse((self.home / '.config/scalpel/config.json').exists())
 
 
 class NetworkTests(unittest.TestCase):

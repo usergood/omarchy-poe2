@@ -14,8 +14,8 @@ if [[ "$source_dir" != "$plugin_dir" ]]; then
     cp -a "$plugin_dir/." "$backup_dir/"
   fi
   mkdir -p "$plugin_dir"
-  cp "$source_dir/manifest.json" "$source_dir/Panel.qml" "$source_dir/PlainText.qml" "$source_dir/backend.py" "$plugin_dir/"
-  cp -r "$source_dir/poe2" "$source_dir/i18n" "$plugin_dir/"
+  cp "$source_dir/manifest.json" "$source_dir/Panel.qml" "$source_dir/PlainText.qml" "$source_dir/SectionCard.qml" "$source_dir/StatusBadge.qml" "$source_dir/ShortcutRecorder.qml" "$source_dir/ShortcutKeys.js" "$source_dir/RepairPrompt.qml" "$source_dir/ThemedButton.qml" "$source_dir/ThemedToggle.qml" "$source_dir/backend.py" "$plugin_dir/"
+  cp -r "$source_dir/poe2" "$source_dir/i18n" "$source_dir/assets" "$plugin_dir/"
 fi
 omarchy-shell shell rescanPlugins
 # Shell discovery is asynchronous; a catalog read waits for the rescan round trip.
@@ -25,5 +25,5 @@ omarchy plugin enable "$plugin_id" --section right
 if omarchy plugin list --json | python3 -c 'import json,sys;sys.exit(not any(x["id"]=="local.poe2-profiles" for x in json.load(sys.stdin)))'; then
   omarchy plugin disable local.poe2-profiles
 fi
-printf '%s\n' 'PoE 2 addon enabled. Open the gamepad icon in the bar.'
+printf '%s\n' 'PoE 2 addon enabled. Open the gold waystone II icon in the bar.'
 printf '%s\n' 'No game files have been changed. Use Tools in the addon to install FSR4.'

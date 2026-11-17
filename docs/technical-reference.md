@@ -1,0 +1,237 @@
+# Technical reference
+
+Advanced compatibility notes, configuration, troubleshooting and contributor checks.
+For installation and everyday use, start with the [user guide](../README.md).
+
+## Install from a local checkout
+
+```bash
+git clone https://github.com/usergood/omarchy-poe2.git
+cd omarchy-poe2
+./install.sh
+```
+
+The installer backs up an existing local copy, enables the widget and disables the
+earlier `local.poe2-profiles` prototype. If updating leaves old QML visible, run
+`omarchy restart shell`. The plugin-manager installation does not run `install.sh`;
+when migrating from the prototype, disable it with
+`omarchy plugin disable local.poe2-profiles`.
+
+## Compatibility and dependencies
+
+- Omarchy's plugin-capable Quickshell bar on Hyprland; Linux x86_64.
+- Python 3.10+, native Steam, `xdg-utils`, and `libarchive` (`bsdtar`).
+- PoE 2 installed through Steam. Launch it once and exit before setting up FSR4.
+- A recent GE-Proton or Proton Experimental selected in Steam's Compatibility settings.
+- For FSR4: suitable GPU support and current Vulkan drivers. This release's preset targets
+  **AMD RDNA2/3 INT8**, tested with an RX 6700 XT, Mesa 26.2.5 and GE-Proton 11-12.
+  Mesa 25.2+ is the documented baseline. Other GPUs are not validated by this addon.
+- Scalpel and the game should run through XWayland for the existing input hooks.
+  The addon forces X11 only for Scalpel; it does not change the desktop session or Steam's environment.
+
+On Omarchy, missing system dependencies can be installed with:
+
+```bash
+omarchy pkg add python steam libarchive xdg-utils
+```
+
+The Scalpel AppImage normally uses FUSE 2. If needed:
+
+```bash
+omarchy pkg add fuse2
+```
+
+Flatpak Steam, non-Steam installations, automatic Proton installation and automatic
+GPU-driver upgrades are outside the supported setup. The addon never installs the
+paid game or signs into accounts on your behalf.
+
+## Profiles and performance
+
+**Original** restores game files and the graphics settings captured before the mod.
+It normally uses Vulkan, but the addon preserves your actual original renderer.
+**FSR4** selects DirectX 12, uses DLSS as OptiScaler's input, forces the SDK's INT8 model,
+turns off dynamic resolution, and keeps frame generation disabled.
+
+FSR4 improves image reconstruction but is not guaranteed to improve FPS. INT8 processing
+on RDNA2 costs GPU time; the renderer and scaling preset also affect the comparison.
+Under **Settings**, compare Quality, Balanced and Performance in the same scene.
+First-run shader compilation can cause additional stutter. The addon does not silently
+change graphics quality to conceal a performance regression.
+
+The watermark is **off** and logging is **off** by default. Enable the watermark
+briefly after an upgrade to verify `FSR4`/`FSR4-i8` rather than `FSR3` fallback.
+Selecting FSR4 or seeing its DLL loaded alone does not establish that the model runs.
+Diagnostic logging is Info-level only; per-frame Trace logging is never enabled.
+
+The default OptiScaler menu key is `0xDC`: **§ on a Swedish layout**. It is a Windows
+virtual key, not a Unicode character. Other layouts may map it differently.
+
+To change it, close PoE 2 and Steam, then open **Settings → Diagnostics & Hotkeys →
+Menu shortcut**. Click **Change**, press a key and review the proposed key and code.
+Choose **Accept key** to save, **Try another** to record again, or **Cancel** / **Esc**
+to keep your current shortcut. Closing the panel also discards an unaccepted key.
+The shortcut applies on the next game launch and survives profile switches and repair.
+
+The recorder supports single letters, digits, F1–F24, navigation/editing keys, numpad
+keys and the Swedish § key. Modifier combinations and punctuation whose Windows
+mapping is ambiguous are rejected rather than guessed. Modifier-only presses are
+ignored. Esc is reserved for cancelling capture. Advanced Windows key values can
+still be set through the CLI:
+
+```bash
+python3 ~/.config/omarchy/plugins/usergood.poe2/backend.py configure --menu-key 0x79
+```
+
+`0x79` is F10. Restart the game after changing settings. Exit Steam first because
+profile and preference changes may update game files and Steam's launch options.
+
+## Steam updates and repair
+
+The addon records the Steam build and ownership/hash of every installed file.
+A changed build or missing/changed mod file is shown as **Profile needs repair**.
+The **Play** game card shows the next step directly: close PoE 2 if it is running,
+choose **Exit Steam to repair**, then wait for the Steam badge to show **Steam
+closed**. The same button becomes **Repair Original profile** or **Repair FSR4
+profile**, matching your selection. Click it to repair; **Launch PoE 2** returns
+when the profile is ready. Exiting Steam never starts repair automatically.
+**Repair selected profile** reapplies the locally saved payload without a download.
+**Install / Update FSR4** checks the latest official stable release, verifies its
+archive, stages it, checks the supported INI schema, and applies it.
+
+When a new Steam build replaces a file that originally belonged to the game, repair
+keeps the newer Steam file as the original backup before reapplying OptiScaler. It
+will not later restore the old game's DLL over that new version. Unexpected changes
+to mod-owned binaries stop the operation rather than overwriting another mod.
+
+A future OptiScaler release with an incompatible INI schema is deliberately rejected
+before touching the game. Update this addon for a supported migration; the current
+working release remains available. **Previous OptiScaler version** restores the
+previous payload while retaining current backups of Steam-owned files.
+
+Scalpel's system package is never overwritten. Managed AppImages live in your user
+data directory; an existing Scalpel process must exit before replacement. Existing
+Scalpel settings are preserved. On a clean first launch the addon seeds PoE 2-only
+preferences. The launcher uses `XDG_SESSION_TYPE=x11` and `--ozone-platform=x11`.
+The addon reads `onboardingCompleted` and `poeVersion` from Scalpel's
+`${XDG_CONFIG_HOME:-~/.config}/scalpel/config.json`; it never marks onboarding complete
+or changes an existing selection. Missing or unreadable settings require checking
+setup in Scalpel. **Open Scalpel** can also bring an already running instance to
+the foreground. Setup completion verifies saved preferences, not live overlay or
+hotkey readiness; test price checking in-game after setup.
+
+## Other Steam libraries and accounts
+
+Library paths are read from Steam's `libraryfolders.vdf`; no user or mount path is
+hardcoded. The most recently used Steam account is preferred if multiple accounts
+contain the game. If that is ambiguous, select the account explicitly:
+
+```bash
+python3 ~/.config/omarchy/plugins/usergood.poe2/backend.py configure --account 12345678
+```
+
+For an unusual native Steam root, use `configure --steam-root /path/to/Steam` before
+installing FSR4. Library/account changes after setup are blocked until the original
+installation is restored. After choosing Original, you can reset the registry before
+selecting a different library or account (old backups remain available):
+
+```bash
+python3 ~/.config/omarchy/plugins/usergood.poe2/backend.py reset-setup
+``` Data from another machine should not be copied over an
+existing installation registry; install the addon there and initialize it normally.
+
+## Data, network access and removal
+
+State is stored under `~/.local/share/omarchy/poe2-addon/` (or `POE2_ADDON_DATA` for CLI tests):
+
+- `preferences.json`: chosen quality, menu key, watermark and startup choices.
+- `installation.json`: game build, selected profile, release and file ownership.
+- `blobs/`: immutable content-addressed backups and SDK payloads.
+- `payloads/`, `cache/`: verified releases for offline repair and rollback.
+- `transaction.json`: recovery journal only while changing files.
+- `scalpel-launch.log`: bounded launcher diagnostics, not game/chat contents.
+
+No scheduled network access or telemetry is added. Update buttons contact only
+`api.github.com`, the official upstream repositories and GitHub's release-asset hosts.
+Launching Scalpel permits that application's own normal network behavior and update checks.
+The trade shortcut opens `https://www.pathofexile.com/trade2` in the default browser.
+
+To remove the game integration, exit PoE 2 and Steam and choose **Original** first.
+Then remove the plugin:
+
+```bash
+omarchy plugin remove usergood.poe2 --yes
+```
+
+Keep the state directory until you are sure no backup or rollback is needed. Removing
+the plugin itself does not automatically restore modified game files or delete backups.
+
+## Troubleshooting and safety
+
+OptiScaler's upstream warns against online/anti-cheat use. PoE 2 has an upstream
+compatibility entry, but that is not a guarantee against account-policy changes.
+Read the upstream documentation and decide whether to use the mod for your account.
+
+If a switch was interrupted, exit Steam and the game and run:
+
+```bash
+python3 ~/.config/omarchy/plugins/usergood.poe2/backend.py recover
+```
+
+An unrecognized `dxgi.dll` is never overwritten. The earlier local prototype can be
+adopted using its saved original-file backups when its binary hash matches; unrelated
+mods require restoring their original files first. The addon does not run downloaded
+setup scripts, silently enable frame generation, delete an unknown mod, or reset
+unrelated Steam settings.
+
+This is a local integration tool, not a guarantee of GPU/game performance. A supported
+release still needs an in-game check for stability, price-checker focus and FSR4 output.
+
+## Development
+
+The backend uses only Python's standard library and external `bsdtar` for 7z archives.
+It returns bounded JSON to QML; external text is shown using `Text.PlainText`, never rich text.
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 -m compileall -q backend.py poe2
+omarchy plugin validate .
+```
+
+Tests use temporary Steam libraries and synthetic SDK payloads. They cover fresh
+setup, VDF escaping/scoping, restored settings, new Steam builds, missing files,
+unknown-mod rejection, download integrity, archive paths, failed-write/crash recovery,
+and Scalpel first-run launch ordering, setup detection and preference preservation.
+No CI test downloads or executes the actual game, OptiScaler or Scalpel.
+
+The shortcut conversion has an additional Qt Quick Test suite (requires Qt 6
+declarative development tools):
+
+```bash
+QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml
+```
+
+It checks the § → `0xDC` mapping, function keys, letters, digits, navigation/numpad
+keys, rejected modifiers and ambiguous punctuation. Backend tests check shortcut
+persistence in the OptiScaler INI and the Steam process guard.
+
+On an Omarchy development machine, test popup colors across a live palette change:
+
+```bash
+python3 tests/check_theme.py
+```
+
+This uses a separate offscreen Quickshell process. It changes no desktop theme or
+game settings, and checks the same controls before and after a dark-to-light palette
+change, including a popup text role that differs from desktop text.
+
+## Releases
+
+Keep `manifest.json`, `poe2/__init__.py` and the version heading in `CHANGELOG.md`
+in sync. The Test workflow validates these on pull requests. After a merge into
+`main`, successful backend checks publish a GitHub release for that version, with
+the matching changelog notes and a tag pointing to the tested commit. Existing
+releases are skipped, so ordinary changes do not republish the same version.
+
+Upstreams: [OptiScaler](https://github.com/optiscaler/OptiScaler),
+[PoE 2 compatibility](https://github.com/optiscaler/OptiScaler/wiki/Path-of-Exile-2),
+[Scalpel](https://github.com/scalpelpoe/scalpel). Their licenses remain their own.
