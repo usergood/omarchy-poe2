@@ -14,7 +14,7 @@ if [[ "$source_dir" != "$plugin_dir" ]]; then
     cp -a "$plugin_dir/." "$backup_dir/"
   fi
   mkdir -p "$plugin_dir"
-  cp "$source_dir/manifest.json" "$source_dir/Panel.qml" "$source_dir/PlainText.qml" "$source_dir/SectionCard.qml" "$source_dir/StatusBadge.qml" "$source_dir/ShortcutRecorder.qml" "$source_dir/ShortcutKeys.js" "$source_dir/RepairPrompt.qml" "$source_dir/backend.py" "$plugin_dir/"
+  cp "$source_dir/manifest.json" "$source_dir/Panel.qml" "$source_dir/PlainText.qml" "$source_dir/SectionCard.qml" "$source_dir/StatusBadge.qml" "$source_dir/ShortcutRecorder.qml" "$source_dir/ShortcutKeys.js" "$source_dir/RepairPrompt.qml" "$source_dir/ThemedButton.qml" "$source_dir/ThemedToggle.qml" "$source_dir/backend.py" "$plugin_dir/"
   cp -r "$source_dir/poe2" "$source_dir/i18n" "$source_dir/assets" "$plugin_dir/"
 fi
 omarchy-shell shell rescanPlugins

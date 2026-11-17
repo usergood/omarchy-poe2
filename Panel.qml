@@ -99,7 +99,7 @@ Panel {
         onPressed: root.toggle()
     }
     // Native controls keep theme focus, hover and motion behavior.
-    component ActionButton: Button {
+    component ActionButton: ThemedButton {
         focusable: true
         verticalPadding: Commons.Style.space(9)
         opacity: enabled ? 1 : 0.42
@@ -259,7 +259,6 @@ Panel {
                         spacing: Commons.Style.space(12)
                         SectionCard {
                             width: parent.width
-                            highlighted: true
                             Row {
                                 width: parent.width
                                 spacing: Commons.Style.space(8)
@@ -505,7 +504,7 @@ Panel {
                         SectionCard {
                             width: parent.width
                             SectionLabel { text: strings.t("startupHeading") }
-                            Toggle {
+                            ThemedToggle {
                                 width: parent.width
                                 label: strings.t("autoScalpel")
                                 description: strings.t("autoScalpelHint")
@@ -536,7 +535,7 @@ Panel {
                                     }
                                 }
                             }
-                            Toggle {
+                            ThemedToggle {
                                 width: parent.width
                                 label: strings.t("watermark")
                                 description: strings.t("watermarkHint")
@@ -549,7 +548,7 @@ Panel {
                         SectionCard {
                             width: parent.width
                             SectionLabel { text: strings.t("diagnosticsHeading") }
-                            Toggle {
+                            ThemedToggle {
                                 width: parent.width
                                 label: strings.t("diagnostics")
                                 description: strings.t("diagnosticsHint")

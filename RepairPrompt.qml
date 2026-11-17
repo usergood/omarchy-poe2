@@ -18,7 +18,7 @@ Column {
         text: strings.t(root.gameRunning ? "repairCloseGame" : root.steamRunning ? "repairCloseSteam" : "repairReady").arg(root.profileName)
         font.pixelSize: Commons.Style.font.bodySmall
     }
-    Button {
+    ThemedButton {
         width: parent.width
         text: root.busy ? strings.t(root.repairing ? "repairingProfile" : "working")
             : root.gameRunning ? strings.t("exitGameBeforeRepair")

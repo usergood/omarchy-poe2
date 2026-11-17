@@ -89,7 +89,7 @@ Column {
                 wrapMode: Text.NoWrap
             }
         }
-        Button {
+        ThemedButton {
             id: changeButton
             anchors.verticalCenter: parent.verticalCenter
             text: strings.t("changeShortcut")
@@ -132,7 +132,7 @@ Column {
         Row {
             width: parent.width
             spacing: Commons.Style.space(6)
-            Button {
+            ThemedButton {
                 id: acceptButton
                 visible: root.mode === "review"
                 text: strings.t("acceptShortcut")
@@ -145,13 +145,13 @@ Column {
                 Keys.onEnterPressed: function(event) { event.accepted = true; if (!event.isAutoRepeat) root.accept() }
                 Keys.onSpacePressed: function(event) { event.accepted = true; if (!event.isAutoRepeat) root.accept() }
             }
-            Button {
+            ThemedButton {
                 visible: root.mode === "review"
                 text: strings.t("retryShortcut")
                 focusable: true
                 onClicked: root.begin()
             }
-            Button {
+            ThemedButton {
                 text: strings.t("cancelShortcut")
                 focusable: true
                 onClicked: root.cancel()

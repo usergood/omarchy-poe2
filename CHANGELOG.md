@@ -1,7 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
+- Use the same neutral theme surface for the PoE 2 and Scalpel cards instead of tinting the game card with the accent color.
+- Simplify the user guide, add screenshots of the current interface and move advanced details into a technical reference.
+- Align button and switch text with the popup palette, improve switch description contrast on light themes, and test live palette changes.
 - Put step-by-step repair guidance and the next action directly in the Play game card, including exiting Steam and repairing the selected profile.
 - Record an OptiScaler menu shortcut by pressing a key, reviewing it, and explicitly accepting or cancelling; retain the Swedish § default.
 - Keep panel navigation and feedback fixed, fit content to the available screen height, and reserve a gutter when page scrolling is needed.
