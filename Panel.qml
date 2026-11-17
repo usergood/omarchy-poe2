@@ -11,6 +11,7 @@ Panel {
     property var snapshot: ({})
     property string message: ""
     property bool failed: false
+    property bool confirmFsr4Install: false
     property string activeAction: ""
     property int tab: 0
     readonly property string script: decodeURIComponent(Qt.resolvedUrl("backend.py").toString().replace(/^file:\/\//, ""))
@@ -65,7 +66,12 @@ Panel {
         if (!entry) return strings.t("notChecked")
         return entry.latest ? strings.t("latest").arg(String(entry.latest).slice(0, 40)) : strings.t("checkFailed")
     }
-    onOpenedChanged: if (opened) refresh()
+    onOpenedChanged: {
+        if (opened) refresh()
+        else confirmFsr4Install = false
+    }
+    onTabChanged: confirmFsr4Install = false
+    onCanChangeChanged: if (!canChange) confirmFsr4Install = false
     Component.onCompleted: refresh()
     Timer { interval: 5000; repeat: true; running: root.opened; onTriggered: root.refresh() }
     Timer { id: feedbackTimer; interval: 6000; onTriggered: root.message = "" }
@@ -426,12 +432,45 @@ Panel {
                             Caption { width: parent.width; text: strings.t("optiVersion").arg(String(root.snapshot.optiscaler || strings.t("notInstalled"))) }
                             Caption { width: parent.width; text: root.checkedVersion("optiscaler") }
                             ActionButton {
+                                id: installOptiButton
                                 width: parent.width
+                                visible: !root.confirmFsr4Install
                                 text: strings.t("installOpti")
                                 background: Qt.alpha(Commons.Color.accent, 0.12)
                                 foreground: Commons.Color.accent
                                 enabled: root.canChange
-                                onClicked: root.run(["install-optiscaler"])
+                                onClicked: {
+                                    root.confirmFsr4Install = true
+                                    cancelOptiInstall.forceActiveFocus()
+                                }
+                            }
+                            Column {
+                                width: parent.width
+                                spacing: Commons.Style.space(6)
+                                visible: root.confirmFsr4Install
+                                Caption { width: parent.width; text: strings.t("confirmOptiHint") }
+                                Row {
+                                    width: parent.width
+                                    spacing: Commons.Style.space(6)
+                                    ActionButton {
+                                        id: cancelOptiInstall
+                                        width: (parent.width - parent.spacing) / 2
+                                        text: strings.t("cancelOpti")
+                                        bordered: true
+                                        onClicked: {
+                                            root.confirmFsr4Install = false
+                                            installOptiButton.forceActiveFocus()
+                                        }
+                                    }
+                                    ActionButton {
+                                        width: (parent.width - parent.spacing) / 2
+                                        text: strings.t("applyFsr4")
+                                        foreground: Commons.Color.accent
+                                        bordered: true
+                                        enabled: root.canChange
+                                        onClicked: root.run(["install-optiscaler"])
+                                    }
+                                }
                             }
                             Row {
                                 width: parent.width
