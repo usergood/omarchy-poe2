@@ -24,8 +24,12 @@ The panel follows your Omarchy theme and font. Click a screenshot to view it at 
 
 ## Before you start
 
-You need an up-to-date Omarchy installation with plugin support, Steam, and a copy
-of PoE 2 installed through Steam. Flatpak Steam is not supported.
+You need Omarchy Quattro with its Quickshell bar on Hyprland, Python 3.10+, and
+a copy of PoE 2 installed through native Steam on x86-64. Trade links use
+`xdg-open` from `xdg-utils`. OptiScaler needs `bsdtar` from `libarchive`,
+a compatible GPU and a recent Proton version. The optional Scalpel AppImage
+typically needs `fuse2`. See the [technical reference](docs/technical-reference.md#compatibility-and-dependencies)
+for package and compatibility details.
 
 Launch PoE 2 once from Steam, then close the game. This creates the settings the
 plugin needs.
@@ -40,11 +44,12 @@ if you are unsure.
 Open a terminal and run:
 
 ```bash
-omarchy plugin add https://github.com/usergood/omarchy-poe2 --enable --yes
+omarchy plugin add https://github.com/usergood/omarchy-poe2 --enable
 ```
 
-Look for the **gold II emblem** on the right side of your bar. Click it to open the
-plugin. Installing the plugin does not change your game files.
+Confirm the installation, then choose **right** for the bar placement. Look for
+the **gold II emblem** and click it to open the plugin. Installing the widget
+leaves your game files as they are.
 
 ## Start playing
 
@@ -68,7 +73,7 @@ when you are ready. You can turn automatic startup off under **Settings**.
 
 1. In Steam, open PoE 2's **Properties → Compatibility** and select a recent GE-Proton or Proton Experimental.
 2. Close PoE 2 and fully exit Steam.
-3. Open **Tools → Install / Update FSR4**. This installs OptiScaler, which provides the FSR4 integration.
+3. Open **Tools → Install / Update FSR4**, review the changes, and choose **Apply FSR4**.
 4. Return to **Play** and launch PoE 2.
 
 Use **Original** or **FSR4** under **Rendering profile** to switch between them.
@@ -115,12 +120,20 @@ Esc cancels recording. The new shortcut applies the next time you launch the gam
 
 ## Remove the plugin
 
-First close PoE 2 and Steam, then select **Original** to restore the game setup.
-After that, remove the plugin:
+If you used FSR4, close PoE 2 and fully exit Steam. In **Play**, select
+**Original** and wait for the restoration to succeed before removing the widget.
+If the panel asks for repair, follow its instructions and then select
+**Original** again. If you only used the launcher, trade or Scalpel, skip the
+profile step.
 
 ```bash
-omarchy plugin remove usergood.poe2 --yes
+omarchy plugin remove usergood.poe2
 ```
+
+Confirm removal when prompted. Omarchy removes the widget. The plugin's saved
+preferences, recovery backups and any managed Scalpel AppImage remain in
+`~/.local/share/omarchy/poe2-addon/`. Keep the backups until you have verified
+that the game launches with the restored settings.
 
 For advanced settings, local installation, compatibility and developer checks,
 see the [technical reference](docs/technical-reference.md).
@@ -128,3 +141,8 @@ see the [technical reference](docs/technical-reference.md).
 This is an independent community plugin. PoE 2, [Scalpel](https://github.com/scalpelpoe/scalpel)
 and [OptiScaler](https://github.com/optiscaler/OptiScaler) are separate projects.
 FSR4 uses a third-party game modification; review the upstream compatibility and usage notes before enabling it.
+
+## License
+
+The plugin is available under the [MIT License](LICENSE). Scalpel and OptiScaler
+are optional external downloads governed by their own licenses.

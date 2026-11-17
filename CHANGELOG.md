@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1
+
+- Confirm before installing or updating FSR4. The panel explains which game files and settings the operation changes and how to restore the Original profile.
+- Document dependencies, license, and removal steps, and add a Play screenshot for the Omarchy Plugin Marketplace.
+
 ## 1.1.0
 
 - Use the same neutral theme surface for the PoE 2 and Scalpel cards instead of tinting the game card with the accent color.
