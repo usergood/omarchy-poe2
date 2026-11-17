@@ -75,7 +75,7 @@ def run(argv=None):
         if action == 'launch':
             message = manager.launch_game()
         elif action == 'launch-scalpel':
-            message = manager.launch_scalpel()
+            message = manager.launch_scalpel(focus=True)
         elif action == 'exit-steam':
             if 'game' in steam.processes():
                 raise AddonError('Exit PoE 2 before asking Steam to shut down.')

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Put step-by-step repair guidance and the next action directly in the Play game card, including exiting Steam and repairing the selected profile.
+- Record an OptiScaler menu shortcut by pressing a key, reviewing it, and explicitly accepting or cancelling; retain the Swedish § default.
+- Keep panel navigation and feedback fixed, fit content to the available screen height, and reserve a gutter when page scrolling is needed.
+- Redesign Play, Tools and Settings with a branded header, theme-aware cards and clearer typography.
+- Show live PoE 2, Scalpel and Steam states without dimming controls during background status checks.
+- Guide first-time Scalpel onboarding before launching PoE 2 with automatic Scalpel startup.
+- Detect completed setup and the selected game without changing existing Scalpel preferences.
+- Respect XDG_CONFIG_HOME for Scalpel settings and allow reopening its running window.
+- Replace the generic gamepad with a custom gold waystone II icon, included in local installs.
+
 ## 1.0.0
 
 - Unified Play, Tools and Settings pages for Steam PoE 2, Scalpel and the trade site.

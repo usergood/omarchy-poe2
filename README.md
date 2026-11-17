@@ -6,7 +6,8 @@ OptiScaler setup after Steam patches.
 
 ## What it does
 
-- Launches native Steam PoE 2, optionally starting Scalpel once alongside it.
+- Launches native Steam PoE 2, optionally starting Scalpel alongside it after verifying first-time setup.
+- Shows live PoE 2, Scalpel and Steam process states, with a branded, theme-aware panel.
 - Opens PoE 2 Trade in your desktop's default browser.
 - Finds PoE 2 across native Steam libraries, including libraries on other drives.
 - Installs OptiScaler from its official stable GitHub release, with SHA-256 verification.
@@ -66,6 +67,9 @@ cd omarchy-poe2
 ./install.sh
 ```
 
+If an update leaves the old icon visible, run `omarchy restart shell` to reload
+the shell's cached QML components. A plugin rescan alone can retain the old widget.
+
 The local installer enables the new widget and disables the earlier
 `local.poe2-profiles` prototype if present. The plugin-manager installation does not
 run `install.sh`; if migrating, disable that prototype yourself to avoid duplicate widgets:
@@ -80,17 +84,42 @@ Installing the plugin changes no game files. The addon itself makes no update or
 
 1. Install PoE 2 through native Steam, select a current Proton, launch the game once,
    then exit the game and fully exit Steam.
-2. Open the gamepad icon in the bar. **Play** offers the game, Scalpel and trade site.
+2. Open the gold waystone **II** icon in the bar. **Play** offers the game, Scalpel and trade site.
 3. Under **Tools**, select **Install / Update FSR4**. The addon finds the game,
    downloads and verifies the official archive, backs up existing files, installs the
    SDKs, sets the DLL override for this game only, and selects the FSR4 profile.
 4. Use an existing Scalpel installation, or select **Install / Update Scalpel AppImage**.
    The latter downloads a verified user-owned copy and leaves system packages intact.
-5. Choose **Original** or **FSR4** under Play, then launch PoE 2.
+5. Under **Play**, choose **Open Scalpel setup**. Complete Scalpel's onboarding,
+   select PoE 2 and let Scalpel restart if it asks. Existing settings are preserved.
+   The addon shows when onboarding is complete and PoE 2 is selected.
+6. Choose **Original** or **FSR4** under Play, then launch PoE 2. With **Start Scalpel
+   with PoE 2** enabled (the default), an installed Scalpel must finish setup first:
+   the launch button opens Scalpel alone until it is ready. Return and click
+   **Launch PoE 2** again; the game never starts automatically after onboarding.
+   Scalpel remains optional: without an installation, or with automatic startup
+   disabled under Settings, the game can launch on its own.
 
 Missing game, prefix or Steam-account settings produce actionable messages rather
 than partially installing a mod. The **Install PoE 2 in Steam** button opens Steam's
 own installation flow when the game is absent.
+
+### Panel and session status
+
+The panel follows Omarchy's current font, scale, colors, corners and control
+animations. Play groups game and companion actions into cards; Tools groups
+installation and repair; Settings groups startup, image quality and diagnostics.
+The emblem appears in both the bar and panel header.
+The header and tabs stay fixed. Pages scroll only when they exceed the available
+screen height, with a separate scrollbar gutter. Feedback stays below the page;
+success messages dismiss after six seconds, while errors remain visible.
+
+The game and Scalpel cards show whether their processes are running; the Steam
+badge stays visible on every tab. Status refreshes locally every five seconds while
+the panel is open. These checks do not make network requests or dim the controls.
+Running PoE 2 disables duplicate launch requests, while **Show Scalpel window** can
+bring its existing window forward. Process detection does not verify overlay
+attachment or in-game hotkey behavior.
 
 ### Profiles and performance
 
@@ -111,7 +140,19 @@ Selecting FSR4 or seeing its DLL loaded alone does not establish that the model 
 Diagnostic logging is Info-level only; per-frame Trace logging is never enabled.
 
 The default OptiScaler menu key is `0xDC`: **§ on a Swedish layout**. It is a Windows
-virtual key, not a Unicode character. Other layouts may map it differently. To change it:
+virtual key, not a Unicode character. Other layouts may map it differently.
+
+To change it, close PoE 2 and Steam, then open **Settings → Diagnostics & Hotkeys →
+Menu shortcut**. Click **Change**, press a key and review the proposed key and code.
+Choose **Accept key** to save, **Try another** to record again, or **Cancel** / **Esc**
+to keep your current shortcut. Closing the panel also discards an unaccepted key.
+The shortcut applies on the next game launch and survives profile switches and repair.
+
+The recorder supports single letters, digits, F1–F24, navigation/editing keys, numpad
+keys and the Swedish § key. Modifier combinations and punctuation whose Windows
+mapping is ambiguous are rejected rather than guessed. Modifier-only presses are
+ignored. Esc is reserved for cancelling capture. Advanced Windows key values can
+still be set through the CLI:
 
 ```bash
 python3 ~/.config/omarchy/plugins/usergood.poe2/backend.py configure --menu-key 0x79
@@ -124,6 +165,11 @@ profile and preference changes may update game files and Steam's launch options.
 
 The addon records the Steam build and ownership/hash of every installed file.
 A changed build or missing/changed mod file is shown as **Profile needs repair**.
+The **Play** game card shows the next step directly: close PoE 2 if it is running,
+choose **Exit Steam to repair**, then wait for the Steam badge to show **Steam
+closed**. The same button becomes **Repair Original profile** or **Repair FSR4
+profile**, matching your selection. Click it to repair; **Launch PoE 2** returns
+when the profile is ready. Exiting Steam never starts repair automatically.
 **Repair selected profile** reapplies the locally saved payload without a download.
 **Install / Update FSR4** checks the latest official stable release, verifies its
 archive, stages it, checks the supported INI schema, and applies it.
@@ -142,6 +188,12 @@ Scalpel's system package is never overwritten. Managed AppImages live in your us
 data directory; an existing Scalpel process must exit before replacement. Existing
 Scalpel settings are preserved. On a clean first launch the addon seeds PoE 2-only
 preferences. The launcher uses `XDG_SESSION_TYPE=x11` and `--ozone-platform=x11`.
+The addon reads `onboardingCompleted` and `poeVersion` from Scalpel's
+`${XDG_CONFIG_HOME:-~/.config}/scalpel/config.json`; it never marks onboarding complete
+or changes an existing selection. Missing or unreadable settings require checking
+setup in Scalpel. **Open Scalpel** can also bring an already running instance to
+the foreground. Setup completion verifies saved preferences, not live overlay or
+hotkey readiness; test price checking in-game after setup.
 
 ### Other Steam libraries and accounts
 
@@ -223,8 +275,20 @@ omarchy plugin validate .
 
 Tests use temporary Steam libraries and synthetic SDK payloads. They cover fresh
 setup, VDF escaping/scoping, restored settings, new Steam builds, missing files,
-unknown-mod rejection, download integrity, archive paths and failed-write/crash recovery.
+unknown-mod rejection, download integrity, archive paths, failed-write/crash recovery,
+and Scalpel first-run launch ordering, setup detection and preference preservation.
 No CI test downloads or executes the actual game, OptiScaler or Scalpel.
+
+The shortcut conversion has an additional Qt Quick Test suite (requires Qt 6
+declarative development tools):
+
+```bash
+QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml
+```
+
+It checks the § → `0xDC` mapping, function keys, letters, digits, navigation/numpad
+keys, rejected modifiers and ambiguous punctuation. Backend tests check shortcut
+persistence in the OptiScaler INI and the Steam process guard.
 
 Upstreams: [OptiScaler](https://github.com/optiscaler/OptiScaler),
 [PoE 2 compatibility](https://github.com/optiscaler/OptiScaler/wiki/Path-of-Exile-2),
