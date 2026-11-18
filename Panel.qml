@@ -61,6 +61,35 @@ Panel {
         } catch (e) { feedbackTimer.stop(); message = strings.t("error"); failed = true }
     }
     function option(name, value) { run(["configure", "--" + name, value]) }
+    function compareReleaseTags(left, right) {
+        const pattern = /^v?(\d+)\.(\d+)\.(\d+)([a-z]?)$/
+        const a = pattern.exec(left)
+        const b = pattern.exec(right)
+        if (!a || !b) return NaN
+        for (let i = 1; i <= 3; i++) {
+            const difference = Number(a[i]) - Number(b[i])
+            if (difference !== 0) return difference
+        }
+        return a[4].localeCompare(b[4])
+    }
+    function releaseAction(component, installed, label) {
+        if (!installed) return strings.t("installTool").arg(label)
+        const latest = snapshot.updates?.[component]?.latest
+        const comparison = compareReleaseTags(latest, installed)
+        if (comparison === 0) return strings.t("reinstallTool").arg(label)
+        if (comparison > 0)
+            return strings.t("updateToolVersion").arg(label).arg(String(latest))
+        return strings.t("refreshTool").arg(label)
+    }
+    function openScalpelTools() {
+        tab = 1
+        Qt.callLater(function() {
+            if (root.tab !== 1 || !root.opened) return
+            scalpelInstallButton.forceActiveFocus()
+            scroll.contentY = Math.max(0, Math.min(scalpelCard.mapToItem(column, 0, 0).y,
+                scroll.contentHeight - scroll.height))
+        })
+    }
     function checkedVersion(name) {
         var entry = snapshot.updates ? snapshot.updates[name] : null
         if (!entry) return strings.t("notChecked")
@@ -169,7 +198,6 @@ Panel {
                         width: parent.width - emblem.width - closeButton.width - parent.spacing * 2
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: Commons.Style.space(3)
-                        SectionLabel { text: strings.t("headerEyebrow") }
                         PlainText {
                             width: parent.width
                             text: strings.t("title")
@@ -350,7 +378,7 @@ Panel {
                                 text: strings.t(!root.scalpelAvailable ? "getScalpel" : root.scalpelNeedsSetup ? "setupScalpel" : root.scalpelRunning ? "showScalpel" : "launchScalpel")
                                 bordered: true
                                 enabled: root.initialized && !root.busy
-                                onClicked: { if (root.scalpelAvailable) root.run(["launch-scalpel"]); else root.tab = 1 }
+                                onClicked: { if (root.scalpelAvailable) root.run(["launch-scalpel"]); else root.openScalpelTools() }
                             }
                         }
                         Row {
@@ -365,6 +393,7 @@ Panel {
                             }
                             ActionButton {
                                 id: tradeButton
+                                width: Math.ceil(implicitWidth)
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: strings.t("openTrade")
                                 iconText: "↗"
@@ -435,7 +464,7 @@ Panel {
                                 id: installOptiButton
                                 width: parent.width
                                 visible: !root.confirmFsr4Install
-                                text: strings.t("installOpti")
+                                text: root.releaseAction("optiscaler", root.snapshot.optiscaler, "FSR4")
                                 background: Qt.alpha(Commons.Color.accent, 0.12)
                                 foreground: Commons.Color.accent
                                 enabled: root.canChange
@@ -493,12 +522,14 @@ Panel {
                         }
                         SectionCard {
                             width: parent.width
+                            id: scalpelCard
                             CardTitle { text: "Scalpel" }
                             Caption { width: parent.width; text: strings.t("scalpelVersion").arg(root.snapshot.scalpel ? String(root.snapshot.scalpel.version || strings.t("notInstalled")) : strings.t("notInstalled")) }
                             Caption { width: parent.width; text: root.checkedVersion("scalpel") }
                             ActionButton {
                                 width: parent.width
-                                text: strings.t("installScalpel")
+                                id: scalpelInstallButton
+                                text: root.releaseAction("scalpel", root.snapshot.scalpel?.source === "managed" && root.scalpelAvailable ? root.snapshot.scalpel.version : "", "Scalpel AppImage")
                                 enabled: root.initialized && !root.busy && !root.scalpelRunning
                                 bordered: true
                                 onClicked: root.run(["install-scalpel"])
@@ -574,35 +605,50 @@ Panel {
                                     }
                                 }
                             }
-                            ThemedToggle {
-                                width: parent.width
-                                label: strings.t("watermark")
-                                description: strings.t("watermarkHint")
-                                checked: root.prefs.watermark === true
-                                enabled: root.canChange
-                                opacity: enabled ? 1 : 0.42
-                                onClicked: root.option("watermark", checked ? "off" : "on")
-                            }
                         }
                         SectionCard {
                             width: parent.width
-                            SectionLabel { text: strings.t("diagnosticsHeading") }
-                            ThemedToggle {
+                            ActionButton {
+                                id: diagnosticsButton
+                                property bool expanded: false
                                 width: parent.width
-                                label: strings.t("diagnostics")
-                                description: strings.t("diagnosticsHint")
-                                checked: root.prefs.diagnostics === true
-                                enabled: root.canChange
-                                opacity: enabled ? 1 : 0.42
-                                onClicked: root.option("diagnostics", checked ? "off" : "on")
+                                text: strings.t("diagnosticsHeading")
+                                iconText: expanded ? "▾" : "▸"
+                                Accessible.expandable: true
+                                Accessible.expanded: expanded
+                                bordered: true
+                                onClicked: expanded = !expanded
                             }
-                            Rule { width: parent.width }
-                            ShortcutRecorder {
+                            Column {
+                                visible: diagnosticsButton.expanded
                                 width: parent.width
-                                value: String(root.prefs.menu_key || "0xDC")
-                                available: root.canChange
-                                panelOpen: root.opened
-                                onApplyRequested: function(code) { root.option("menu-key", code) }
+                                spacing: Commons.Style.space(10)
+                                ThemedToggle {
+                                    width: parent.width
+                                    label: strings.t("watermark")
+                                    description: strings.t("watermarkHint")
+                                    checked: root.prefs.watermark === true
+                                    enabled: root.canChange
+                                    opacity: enabled ? 1 : 0.42
+                                    onClicked: root.option("watermark", checked ? "off" : "on")
+                                }
+                                ThemedToggle {
+                                    width: parent.width
+                                    label: strings.t("diagnostics")
+                                    description: strings.t("diagnosticsHint")
+                                    checked: root.prefs.diagnostics === true
+                                    enabled: root.canChange
+                                    opacity: enabled ? 1 : 0.42
+                                    onClicked: root.option("diagnostics", checked ? "off" : "on")
+                                }
+                                Rule { width: parent.width }
+                                ShortcutRecorder {
+                                    width: parent.width
+                                    value: String(root.prefs.menu_key || "0xDC")
+                                    available: root.canChange
+                                    panelOpen: root.opened
+                                    onApplyRequested: function(code) { root.option("menu-key", code) }
+                                }
                             }
                         }
                         Caption {

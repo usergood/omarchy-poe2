@@ -3,19 +3,29 @@
 Advanced compatibility notes, configuration, troubleshooting and contributor checks.
 For installation and everyday use, start with the [user guide](../README.md).
 
-## Install from a local checkout
+## Develop in a Git-managed installation
+
+Install the plugin with the [standard installation command](../README.md#install).
+If you already installed it with Omarchy's plugin manager, use that checkout.
+The directory that the shell loads is also the working copy. Start a branch there:
 
 ```bash
-git clone https://github.com/usergood/omarchy-poe2.git
-cd omarchy-poe2
-./install.sh
+cd ~/.config/omarchy/plugins/usergood.poe2
+git switch -c dev/my-change
+omarchy plugin validate .
 ```
 
-The installer backs up an existing local copy, enables the widget and disables the
-earlier `local.poe2-profiles` prototype. If updating leaves old QML visible, run
-`omarchy restart shell`. The plugin-manager installation does not run `install.sh`;
-when migrating from the prototype, disable it with
-`omarchy plugin disable local.poe2-profiles`.
+Edit the QML or Python sources in place. Validate after your edits, run the
+[developer checks](#development), and use `omarchy restart shell` if the shell
+still shows the previous QML. Save your changes to another checkout or push
+your branch before updating or removing this installation. Omarchy removes the
+whole Git checkout when you remove the plugin.
+
+If an older local installation has no Git checkout, save your local edits
+elsewhere first. Follow the [removal steps](../README.md#remove-the-plugin),
+then install through the plugin manager. When migrating from
+`local.poe2-profiles`, confirm the new widget works and disable the prototype
+with `omarchy plugin disable local.poe2-profiles`.
 
 ## Compatibility and dependencies
 
@@ -66,8 +76,7 @@ Diagnostic logging is Info-level only; per-frame Trace logging is never enabled.
 The default OptiScaler menu key is `0xDC`: **§ on a Swedish layout**. It is a Windows
 virtual key, not a Unicode character. Other layouts may map it differently.
 
-To change it, close PoE 2 and Steam, then open **Settings → Diagnostics & Hotkeys →
-Menu shortcut**. Click **Change**, press a key and review the proposed key and code.
+To change it, close PoE 2 and Steam, then open **Settings**, expand **Diagnostics & hotkeys**, and find **Menu shortcut**. Click **Change**, press a key and review the proposed key and code.
 Choose **Accept key** to save, **Try another** to record again, or **Cancel** / **Esc**
 to keep your current shortcut. Closing the panel also discards an unaccepted key.
 The shortcut applies on the next game launch and survives profile switches and repair.
@@ -95,8 +104,8 @@ closed**. The same button becomes **Repair Original profile** or **Repair FSR4
 profile**, matching your selection. Click it to repair; **Launch PoE 2** returns
 when the profile is ready. Exiting Steam never starts repair automatically.
 **Repair selected profile** reapplies the locally saved payload without a download.
-**Install / Update FSR4** checks the latest official stable release, verifies its
-archive, stages it, checks the supported INI schema, and applies it.
+The FSR4 install, refresh and update actions check the latest official stable release, verify its
+archive, stage it, check the supported INI schema, and apply it.
 
 When a new Steam build replaces a file that originally belonged to the game, repair
 keeps the newer Steam file as the original backup before reapplying OptiScaler. It
