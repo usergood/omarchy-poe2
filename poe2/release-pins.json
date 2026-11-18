@@ -1,0 +1,14 @@
+{
+  "optiscaler": {
+    "tag": "v0.9.5",
+    "name": "Optiscaler_0.9.5-final.20261116.7z",
+    "size": 70418897,
+    "sha256": "77e3ed76bed04e1fb32bacb5a72799ff172f3da22ed5231c0cf3e84fe6761662"
+  },
+  "scalpel": {
+    "tag": "v1.0.6",
+    "name": "Scalpel.AppImage",
+    "size": 117771838,
+    "sha256": "61f0af582af039609899c5c612b6a5785fd0368384b19aa0ef4bed8eca503d54"
+  }
+}

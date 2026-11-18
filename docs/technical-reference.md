@@ -104,8 +104,7 @@ closed**. The same button becomes **Repair Original profile** or **Repair FSR4
 profile**, matching your selection. Click it to repair; **Launch PoE 2** returns
 when the profile is ready. Exiting Steam never starts repair automatically.
 **Repair selected profile** reapplies the locally saved payload without a download.
-The FSR4 install, refresh and update actions check the latest official stable release, verify its
-archive, stage it, check the supported INI schema, and apply it.
+FSR4 installation verifies the pinned archive, stages it, checks the supported INI schema, and applies it.
 
 When a new Steam build replaces a file that originally belonged to the game, repair
 keeps the newer Steam file as the original backup before reapplying OptiScaler. It
@@ -234,6 +233,10 @@ game settings, and checks the same controls before and after a dark-to-light pal
 change, including a popup text role that differs from desktop text.
 
 ## Releases
+
+The [tool release pins](../poe2/release-pins.json) record the exact upstream tag, asset filename, size in bytes and SHA-256 for each managed download. Install and reinstall use these pins even after an upstream check. A replaced asset fails verification. Existing managed installations, local repair payloads and backups remain available.
+
+To update a pin, obtain the intended asset from the official release, compute its size and SHA-256 locally, and compare both with GitHub’s release metadata. Review compatibility and the pin diff in a pull request before releasing the plugin. An automated updater can propose that pull request using the same file.
 
 Keep `manifest.json`, `poe2/__init__.py` and the version heading in `CHANGELOG.md`
 in sync. The Test workflow validates these on pull requests. After a merge into

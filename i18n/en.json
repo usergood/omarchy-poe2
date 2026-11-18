@@ -29,7 +29,7 @@
   "scalpelVersion": "Scalpel: %1",
   "notInstalled": "not installed",
   "notChecked": "Updates have not been checked.",
-  "latest": "Latest stable: %1",
+  "latest": "Latest upstream: %1",
   "checkFailed": "Update check failed. Check your connection and try again.",
   "confirmOptiHint": "This installs OptiScaler in the game folder, then applies FSR4 graphics settings and Steam launch options. Choose Original in Play to restore the saved setup.",
   "cancelOpti": "Cancel",
@@ -107,6 +107,8 @@
   "repairLocalHint": "Uses your saved files without a download. Keeps your selected rendering profile and preferences.",
   "installTool": "Install %1",
   "updateToolVersion": "Update %1 to %2",
-  "refreshTool": "Refresh %1",
+  "installPinned": "Install %1 %2",
+  "pinnedVersion": "Available in this plugin: %1",
+  "pinUpdateHint": "A newer upstream version needs a plugin update before it can be installed.",
   "reinstallTool": "Reinstall %1"
 }

@@ -100,7 +100,7 @@ Esc cancels recording. The new shortcut applies the next time you launch the gam
 ## Updates and common questions
 
 - **Update the plugin:** use Omarchy's plugin manager.
-- **Update Scalpel or FSR4:** choose **Check updates** under **Tools** to see available versions. Use the action on the corresponding tool card.
+- **Update Scalpel or FSR4:** open **Tools** to see the version pinned by this plugin. **Check updates** also shows the latest upstream version. To install a newer upstream version, first update to a plugin release that pins it. Each managed download must match the pinned size and SHA-256.
 - **Old icon or layout after updating?** Run `omarchy restart shell` once.
 - **Game not found?** Check that PoE 2 is installed in regular Steam, then launch it once from Steam.
 - **Buttons are dimmed?** Fully exit PoE 2 and Steam before changing graphics settings, shortcuts or profiles.
