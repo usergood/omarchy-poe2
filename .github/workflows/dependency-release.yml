@@ -1,0 +1,150 @@
+name: Dependency release
+on:
+  schedule:
+    - cron: '17 0,12 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: dependency-release
+  cancel-in-progress: false
+env:
+  GH_REPO: ${{ github.repository }}
+  BASE_BRANCH: ${{ github.event.repository.default_branch }}
+
+jobs:
+  prepare:
+    if: github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      sha: ${{ steps.update.outputs.sha }}
+      base: ${{ steps.update.outputs.base }}
+      pr: ${{ steps.update.outputs.pr }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - name: Prepare dependency update PR
+        id: update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pull_requests() {
+            gh api --method GET "repos/$GH_REPO/pulls" \
+              -f "state=$1" -f "head=${GH_REPO%%/*}:$branch" -f "base=$BASE_BRANCH" --jq "$2"
+          }
+
+          tag=$(python3 .github/scripts/prepare_release.py)
+          tag=${tag#tag=}
+          branch="automation/dependency-release-$tag"
+          latest=$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)
+          if [[ "$latest" != "$tag" ]]; then
+            # Resume publication if an earlier run merged the PR and failed afterward.
+            merged=$(pull_requests closed '.[] | select(.merged_at and .user.login == "github-actions[bot]") | .merge_commit_sha')
+            if [[ -n "$merged" ]]; then
+              git merge-base --is-ancestor "$merged" HEAD
+              echo "sha=$merged" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          python3 .github/scripts/update_dependency_pins.py
+          if git diff --quiet -- poe2/release-pins.json; then
+            exit 0
+          fi
+          tag=$(python3 .github/scripts/prepare_release.py --notes-file "$RUNNER_TEMP/release-notes.md")
+          tag=${tag#tag=}
+          branch="automation/dependency-release-$tag"
+          open_pr=$(pull_requests open '.[] | [.number, .user.login] | @tsv')
+          read -r pr author <<< "$open_pr" || true
+          if [[ -n "$pr" && "$author" != 'github-actions[bot]' ]]; then
+            echo "The release branch has a pull request owned by $author." >&2
+            exit 1
+          fi
+
+          base=$(git rev-parse HEAD)
+          old_head=$(git rev-parse --verify "refs/remotes/origin/$branch" 2>/dev/null || true)
+          git add -- poe2/release-pins.json manifest.json poe2/__init__.py CHANGELOG.md
+          if [[ -n "$old_head" && $(git rev-parse "$old_head^") == "$base" ]] && git diff --cached --quiet "$old_head"; then
+            sha=$old_head
+          else
+            git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m "Update dependency pins for $tag"
+            sha=$(git rev-parse HEAD)
+            git push --force-with-lease="refs/heads/$branch:$old_head" origin "HEAD:refs/heads/$branch"
+          fi
+          if [[ -z "$pr" ]]; then
+            gh pr create --base "$BASE_BRANCH" --head "$branch" --title "Update dependency pins for $tag" \
+              --body-file "$RUNNER_TEMP/release-notes.md"
+            pr=$(pull_requests open '.[0].number')
+          fi
+          [[ "$pr" =~ ^[0-9]+$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: prepare
+    if: needs.prepare.outputs.sha != ''
+    uses: ./.github/workflows/test.yml
+    with:
+      ref: ${{ needs.prepare.outputs.sha }}
+
+  publish:
+    needs: [prepare, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-depth: 0
+      - name: Merge the tested PR and publish its release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ needs.prepare.outputs.pr }}
+          TESTED_BASE: ${{ needs.prepare.outputs.base }}
+        run: |
+          tested=$(git rev-parse HEAD)
+          merged=$tested
+          if [[ -n "$PR" ]]; then
+            live_base=$(gh api "repos/$GH_REPO/git/ref/heads/$BASE_BRANCH" --jq .object.sha)
+            if [[ "$live_base" != "$TESTED_BASE" ]]; then
+              echo "$BASE_BRANCH advanced during testing. The next run will test an updated PR." >&2
+              exit 1
+            fi
+            merged=$(gh api --method PUT "repos/$GH_REPO/pulls/$PR/merge" \
+              -f "sha=$tested" -f merge_method=squash --jq 'select(.merged) | .sha')
+            [[ -n "$merged" ]]
+            git fetch origin "$merged"
+            if [[ $(git rev-parse "$merged^{tree}") != $(git rev-parse "$tested^{tree}") ]]; then
+              echo "The merged tree differs from the tested tree. The next run will test the merged commit." >&2
+              exit 1
+            fi
+          fi
+          if git diff --quiet "$merged^" "$merged" -- poe2/release-pins.json; then
+            echo 'The merge did not update dependency pins.' >&2
+            exit 1
+          fi
+
+          tag=$(python3 .github/scripts/prepare_release.py --notes-file "$RUNNER_TEMP/release-notes.md")
+          tag=${tag#tag=}
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            [[ $(git rev-parse "$tag^{commit}") == "$merged" ]]
+          else
+            git tag "$tag" "$merged"
+            git push origin "refs/tags/$tag"
+          fi
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --verify-tag --title "Omarchy PoE 2 $tag" \
+              --notes-file "$RUNNER_TEMP/release-notes.md" --latest
+          fi

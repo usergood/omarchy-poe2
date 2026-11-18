@@ -2,6 +2,11 @@ name: Test
 on:
   push:
   pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        description: Commit to test
 permissions:
   contents: read
 jobs:
@@ -12,6 +17,8 @@ jobs:
         python: ['3.10', '3.13']
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -21,43 +28,3 @@ jobs:
         run: python .github/scripts/prepare_release.py
       - name: Check JSON manifests and translations
         run: python -c "import json,pathlib; [json.loads(p.read_text()) for p in [pathlib.Path('manifest.json'),*pathlib.Path('i18n').glob('*.json')]]"
-  release:
-    name: Publish versioned release
-    needs: backend
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    concurrency:
-      group: release-main
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Prepare release notes
-        id: release
-        run: python3 .github/scripts/prepare_release.py --notes-file "$RUNNER_TEMP/release-notes.md" >> "$GITHUB_OUTPUT"
-      - name: Publish new version
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
-        run: |
-          if gh release view "$RELEASE_TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
-            echo "Release $RELEASE_TAG already exists; nothing to publish."
-            exit 0
-          fi
-          if git rev-parse --verify "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
-            if [[ "$(git rev-parse "$RELEASE_TAG^{commit}")" != "$GITHUB_SHA" ]]; then
-              echo "Tag $RELEASE_TAG already points to another commit." >&2
-              exit 1
-            fi
-          fi
-          gh release create "$RELEASE_TAG" \
-            --repo "$GH_REPO" \
-            --target "$GITHUB_SHA" \
-            --title "Omarchy PoE 2 $RELEASE_TAG" \
-            --notes-file "$RUNNER_TEMP/release-notes.md" \
-            --latest
