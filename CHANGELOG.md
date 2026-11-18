@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+- Install and develop through the Omarchy plugin manager. Retire the separate local installer.
+- Jump from Play to Scalpel setup, see install and update actions for each tool, and expand diagnostics when needed.
+- Add illustrated covers, refreshed widget screenshots, and a visual guide to repair after Steam updates.
+
 ## 1.1.1
 
 - Confirm before installing or updating FSR4. The panel explains which game files and settings the operation changes and how to restore the Original profile.

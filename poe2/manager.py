@@ -78,11 +78,11 @@ class Manager:
     def payload(self, state=None):
         state = state or self.state
         if not state or not state.get('release'):
-            raise AddonError('OptiScaler is not installed through this addon. Use Install / Update FSR4 first.')
+            raise AddonError('OptiScaler is not installed through this addon. Install FSR4 from Tools first.')
         directory = self.root / 'payloads' / state['release']['id']
         mapping = load(directory / 'files.json')
         if not mapping:
-            raise AddonError('The saved OptiScaler payload is missing. Use Install / Update FSR4.')
+            raise AddonError('The saved OptiScaler payload is missing. Refresh the FSR4 installation from Tools.')
         for rel in mapping:
             p = PurePosixPath(rel)
             if p.is_absolute() or '..' in p.parts or ':' in rel:
@@ -361,7 +361,7 @@ class Manager:
         if not self.state:
             if mode == 'original' and not (Path(info['game']) / 'dxgi.dll').exists():
                 return self.status()
-            raise AddonError('Use Install / Update FSR4 to initialize the addon first.')
+            raise AddonError('Install FSR4 from Tools to initialize the addon first.')
         state = copy.deepcopy(self.state)
         self.reconcile(state, info)
         return self.apply(info, state, mode)
