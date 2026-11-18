@@ -22,7 +22,7 @@ Panel {
     readonly property bool gameRunning: apps.indexOf("game") >= 0
     readonly property bool scalpelRunning: apps.indexOf("scalpel") >= 0
     readonly property bool steamRunning: apps.indexOf("steam") >= 0
-    readonly property bool profileNeedsAttention: ["needs_repair", "unmanaged"].indexOf(snapshot.profile) >= 0
+    readonly property bool profileNeedsAttention: ["needs_repair", "unmanaged", "unpinned"].indexOf(snapshot.profile) >= 0
     readonly property bool repairRequired: snapshot.profile === "needs_repair" && snapshot.configured === true
     readonly property bool scalpelAvailable: !!snapshot.scalpel && snapshot.scalpel.available === true
     readonly property bool scalpelNeedsSetup: scalpelAvailable && snapshot.scalpel.setup !== "ready"

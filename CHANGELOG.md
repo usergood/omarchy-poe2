@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2
+
+- Verify the managed Scalpel AppImage against the bundled size and SHA-256 before launch, including after upgrades from older widget versions.
+- Require the currently pinned OptiScaler release for managed FSR4 launch, repair, and rollback. Players can restore Original or install the pinned release when an older profile differs.
+
 ## 1.2.1
 
 - Pin the exact OptiScaler archive and Scalpel AppImage to their SHA-256 digests and sizes. Tool installs and updates reject replacement binaries.

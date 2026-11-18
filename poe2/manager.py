@@ -36,16 +36,16 @@ class Manager:
     def info(self):
         return steam.discover(self.home, self.preferences['steam_root'] or None, self.preferences['account'] or None)
 
-    def file_hash(self, path):
+    def file_hash(self, path, *, refresh=False):
         path = Path(path)
         if path.is_symlink():
             raise AddonError('A managed game file became a symbolic link: ' + path.name)
         if not path.exists():
             return None
         st = path.stat()
-        signature = [st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns]
+        signature = [st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, st.st_ctime_ns]
         entry = self.hash_cache.get(str(path))
-        if entry and entry['stat'] == signature:
+        if not refresh and entry and entry['stat'] == signature:
             return entry['sha256']
         key = digest(path.read_bytes())
         self.hash_cache[str(path)] = {'stat': signature, 'sha256': key}
@@ -75,10 +75,18 @@ class Manager:
             self.state = load(self.state_path)
             self.recovered = True
 
+    @staticmethod
+    def pinned_optiscaler(state):
+        # stage_release keys each payload by the digest of its verified archive.
+        release = (state or {}).get('release') or {}
+        return release.get('id') == releases.PINS['optiscaler']['sha256']
+
     def payload(self, state=None):
         state = state or self.state
         if not state or not state.get('release'):
             raise AddonError('OptiScaler is not installed through this addon. Install FSR4 from Tools first.')
+        if not self.pinned_optiscaler(state):
+            raise AddonError('This saved OptiScaler release differs from the plugin pin. Install the pinned FSR4 release from Tools.')
         directory = self.root / 'payloads' / state['release']['id']
         mapping = load(directory / 'files.json')
         if not mapping:
@@ -102,6 +110,8 @@ class Manager:
             return 'original', 'Original game files; FSR4 has not been set up in this addon.'
         if self.state['game'] != info['game']:
             return 'needs_repair', 'The Steam library path changed.'
+        if self.state['mode'] == 'fsr4' and not self.pinned_optiscaler(self.state):
+            return 'unpinned', 'Install the pinned FSR4 release from Tools or select Original before launching.'
         if self.state.get('build') != info['build']:
             return 'needs_repair', 'Steam updated PoE 2. Repair the selected profile.'
         game = Path(info['game'])
@@ -132,13 +142,14 @@ class Manager:
             return 'needs_repair', 'An unexpected dxgi.dll is present in Original mode.'
         return self.state['mode'], 'Ready. FSR4 image quality and performance still depend on the game and GPU.' if self.state['mode'] == 'fsr4' else 'Ready with original game files.'
 
-    def scalpel(self):
-        metadata = load(self.root / 'scalpel.json', {})
+    def scalpel(self, *, verify_for_launch=False):
         managed = self.root / 'apps/Scalpel.AppImage'
-        if managed.exists():
-            if metadata.get('sha256') != self.file_hash(managed):
-                return {'available': False, 'source': 'managed', 'version': 'checksum mismatch'}
-            return {'available': True, 'source': 'managed', 'version': metadata.get('tag', 'unknown'), 'path': str(managed)}
+        if managed.exists() or managed.is_symlink():
+            pin = releases.PINS['scalpel']
+            if (managed.is_symlink() or not managed.is_file() or managed.stat().st_size != pin['size']
+                    or self.file_hash(managed, refresh=verify_for_launch) != pin['sha256']):
+                return {'available': False, 'source': 'managed', 'version': 'reinstall pinned AppImage from Tools'}
+            return {'available': True, 'source': 'managed', 'version': pin['tag'], 'path': str(managed)}
         command = shutil.which('scalpel-poe')
         if command:
             version = 'package-managed'
@@ -209,7 +220,7 @@ class Manager:
         scalpel = dict(self.scalpel(), setup=self.scalpel_setup())
         result = {'ok': True, 'addon_version': __version__, 'profile': profile, 'selected': state.get('mode', 'original'),
                   'detail': detail, 'running': steam.processes(), 'game_installed': bool(info and info['installed']),
-                  'build': info['build'] if info else '', 'proton': proton, 'mesa': driver, 'configured': bool(self.state), 'can_rollback': (self.root / 'rollback.json').exists(),
+                  'build': info['build'] if info else '', 'proton': proton, 'mesa': driver, 'configured': bool(self.state), 'can_rollback': self.pinned_optiscaler(load(self.root / 'rollback.json')),
                   'optiscaler': state.get('release', {}).get('tag', ''), 'scalpel': scalpel,
                   'preferences': self.preferences, 'checks': checks, 'warnings': warnings,
                   'pinned_versions': {name: pin['tag'] for name, pin in releases.PINS.items()},
@@ -439,7 +450,9 @@ class Manager:
         running = 'scalpel' in steam.processes()
         if running and not focus:
             return 'Scalpel is already running.'
-        info = self.scalpel()
+        info = self.scalpel(verify_for_launch=True)
+        if not info['available'] and info.get('source') == 'managed':
+            raise AddonError('The managed Scalpel AppImage differs from the plugin pin. Reinstall it from Tools.')
         if not info['available']:
             raise AddonError('Install Scalpel with the addon or install scalpel-poe-bin first.')
         # Preserve existing preferences; seed PoE 2-only defaults on clean machines.
@@ -463,7 +476,9 @@ class Manager:
         info = self.info()
         if not info or not info['installed']:
             raise AddonError('Install Path of Exile 2 in Steam first.')
-        health, _ = self.health(info)
+        health, detail = self.health(info)
+        if health == 'unpinned':
+            raise AddonError(detail)
         if health in {'needs_repair', 'unmanaged'}:
             raise AddonError('Repair the selected game profile before launching from the addon.')
         if 'game' in steam.processes():
