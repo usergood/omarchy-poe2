@@ -236,13 +236,14 @@ change, including a popup text role that differs from desktop text.
 
 The [tool release pins](../poe2/release-pins.json) record the exact upstream tag, asset filename, size in bytes and SHA-256 for each managed download. Install and reinstall use these pins even after an upstream check. A replaced asset fails verification. Before launching a managed Scalpel AppImage, the plugin hashes its bytes against the current pin. If an older installation differs, reinstall Scalpel from Tools. FSR4 launch, repair and rollback require a saved release staged from the pinned archive. When a plugin update changes that pin, install the matching FSR4 release from Tools or restore Original.
 
-To update a pin, obtain the intended asset from the official release, compute its size and SHA-256 locally, and compare both with GitHub’s release metadata. Review compatibility and the pin diff in a pull request before releasing the plugin. An automated updater can propose that pull request using the same file.
-
-Keep `manifest.json`, `poe2/__init__.py` and the version heading in `CHANGELOG.md`
-in sync. The Test workflow validates these on pull requests. After a merge into
-`main`, successful backend checks publish a GitHub release for that version, with
-the matching changelog notes and a tag pointing to the tested commit. Existing
-releases are skipped, so ordinary changes do not republish the same version.
+The Dependency release workflow checks both upstreams at 00:17 and 12:17 UTC.
+For a newer stable tag, it compares the official asset's downloaded size and
+SHA-256 with GitHub's release metadata. One pull request updates all verified
+pins, bumps the patch version in `manifest.json` and `poe2/__init__.py`, and
+adds notes to `CHANGELOG.md`. Both Python jobs in the Test workflow must pass
+before the bot squash-merges the PR and publishes the tagged GitHub release.
+Ordinary pushes run tests. The scheduled workflow skips publication when both
+pins are current and retries an unfinished release from its merged commit.
 
 Upstreams: [OptiScaler](https://github.com/optiscaler/OptiScaler),
 [PoE 2 compatibility](https://github.com/optiscaler/OptiScaler/wiki/Path-of-Exile-2),
