@@ -10,9 +10,11 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from .storage import AddonError, atomic, digest
+from .storage import AddonError, digest
 
 REPOS = {'optiscaler': 'optiscaler/OptiScaler', 'scalpel': 'scalpelpoe/scalpel'}
+PINS = json.loads(Path(__file__).with_name('release-pins.json').read_text())
+STABLE_TAG = re.compile(r'v?\d+\.\d+\.\d+[a-z]?')
 MAX_DOWNLOAD = 350 * 1024 * 1024
 
 
@@ -57,34 +59,29 @@ def fetch(url, limit, destination=None):
         raise AddonError('GitHub download failed. Check the connection or API rate limit and try again.') from exc
 
 
-def latest(component):
+def latest_tag(component):
+    """Informational only. Upstream metadata never selects an installable asset."""
     repo = REPOS[component]
     data = json.loads(fetch('https://api.github.com/repos/' + repo + '/releases/latest', 2 * 1024 * 1024))
-    if data.get('draft') or data.get('prerelease') or not re.fullmatch(r'v?\d+\.\d+\.\d+(?:[a-z])?', str(data.get('tag_name', ''))):
+    tag = data.get('tag_name')
+    if data.get('draft') or data.get('prerelease') or not isinstance(tag, str) or not STABLE_TAG.fullmatch(tag):
         raise AddonError('Upstream did not return a recognized stable release.')
-    assets = []
-    for asset in data.get('assets', []):
-        name = asset.get('name', '')
-        matches = (component == 'scalpel' and name == 'Scalpel.AppImage') or (component == 'optiscaler' and name.lower().endswith('.7z') and name.lower().startswith('optiscaler'))
-        if matches:
-            validate_url(asset.get('browser_download_url', ''), repo)
-            checksum = asset.get('digest', '') or ''
-            if not re.fullmatch(r'sha256:[a-f0-9]{64}', checksum):
-                raise AddonError('The upstream asset has no SHA-256 digest. Automatic installation was stopped.')
-            size = asset.get('size', 0)
-            if not isinstance(size, int) or not 1024 < size <= MAX_DOWNLOAD:
-                raise AddonError('The upstream asset size is invalid.')
-            assets.append({'tag': data['tag_name'], 'name': name, 'url': asset['browser_download_url'], 'sha256': checksum[7:], 'size': size})
-    if len(assets) != 1:
-        raise AddonError('Expected exactly one supported Linux release asset.')
-    return assets[0]
+    return tag
 
 
-def download(release, cache):
+def download(component, cache):
+    pin = PINS[component]
+    repo = REPOS[component]
+    if (not STABLE_TAG.fullmatch(pin['tag']) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', pin['name'])
+            or not re.fullmatch(r'[0-9a-f]{64}', pin['sha256']) or not 1024 < pin['size'] <= MAX_DOWNLOAD):
+        raise AddonError('The bundled release pin is invalid. Update the plugin before installing tools.')
+    url = f"https://github.com/{repo}/releases/download/{pin['tag']}/{pin['name']}"
+    validate_url(url, repo)
+    release = dict(pin, url=url)
     cache.mkdir(parents=True, exist_ok=True)
     target = cache / (release['sha256'] + '-' + release['name'])
-    if target.exists() and digest(target.read_bytes()) == release['sha256']:
-        return target
+    if target.exists() and target.stat().st_size == release['size'] and digest(target.read_bytes()) == release['sha256']:
+        return release, target
     if shutil.disk_usage(cache).free < release['size'] * 4 + 128 * 1024 * 1024:
         raise AddonError('Not enough free disk space to stage this release safely.')
     fd, name = tempfile.mkstemp(dir=cache)
@@ -93,11 +90,11 @@ def download(release, cache):
     try:
         size = fetch(release['url'], min(MAX_DOWNLOAD, release['size'] + 1), temporary)
         if size != release['size'] or digest(temporary.read_bytes()) != release['sha256']:
-            raise AddonError('The download checksum or size does not match GitHub release metadata.')
+            raise AddonError("The download checksum or size does not match the plugin's release pin.")
         os.replace(temporary, target)
     finally:
         temporary.unlink(missing_ok=True)
-    return target
+    return release, target
 
 
 def extract(archive, destination):

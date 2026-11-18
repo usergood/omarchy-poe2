@@ -159,7 +159,7 @@ class ManagerTests(Fixture):
         self.manager.switch('original')
         self.build('101')
         self.assertEqual(self.manager.status()['profile'], 'needs_repair')
-        with patch('poe2.releases.latest', side_effect=AssertionError('Repair must not download')):
+        with patch('poe2.releases.fetch', side_effect=AssertionError('Repair must not download')):
             with patch('poe2.steam.processes', return_value=['steam']):
                 with self.assertRaisesRegex(AddonError, 'fully exit Steam'):
                     self.manager.repair()
@@ -173,7 +173,7 @@ class ManagerTests(Fixture):
     def test_missing_mod_file_is_repaired_without_a_download(self):
         self.install()
         (self.game/'amd_fidelityfx_upscaler_dx12.dll').unlink()
-        with patch('poe2.releases.latest',side_effect=AssertionError('Network not allowed')):
+        with patch('poe2.releases.fetch',side_effect=AssertionError('Network not allowed')):
             self.manager.repair()
         self.assertEqual((self.game/'amd_fidelityfx_upscaler_dx12.dll').read_bytes(),b'fsr4')
 
@@ -407,20 +407,48 @@ class NetworkTests(unittest.TestCase):
         for url in ['http://github.com/optiscaler/OptiScaler/releases/download/v1/a.7z','https://evil.example/a','https://github.com/other/repo/releases/download/v1/a.7z']:
             with self.assertRaises(AddonError):releases.validate_url(url,'optiscaler/OptiScaler')
 
-    def test_missing_digest_is_not_installed(self):
-        raw={'tag_name':'v1.0.0','assets':[{'name':'Scalpel.AppImage','browser_download_url':'https://github.com/scalpelpoe/scalpel/releases/download/v1/Scalpel.AppImage','size':5000}]}
-        with patch('poe2.releases.fetch',return_value=json.dumps(raw).encode()):
-            with self.assertRaisesRegex(AddonError,'SHA-256'):
-                releases.latest('scalpel')
+    def test_new_upstream_metadata_cannot_authorize_replacement_bytes(self):
+        original = b'a' * 5000
+        replacement = b'b' * len(original)
+        for component, repo in releases.REPOS.items():
+            with self.subTest(component=component), tempfile.TemporaryDirectory() as temp:
+                pin = dict(releases.PINS[component], size=len(original), sha256=digest(original))
+                url = f"https://github.com/{repo}/releases/download/{pin['tag']}/{pin['name']}"
+                metadata = {'tag_name': 'v99.0.0', 'assets': [{
+                    'name': pin['name'], 'browser_download_url': url,
+                    'size': len(replacement), 'digest': 'sha256:' + digest(replacement),
+                }]}
 
-    def test_checksum_failure_never_creates_cached_release(self):
+                def fetch(request_url, limit, destination=None):
+                    if destination is None:
+                        self.assertEqual(request_url, f'https://api.github.com/repos/{repo}/releases/latest')
+                        return json.dumps(metadata).encode()
+                    self.assertEqual(request_url, url)
+                    return destination.write_bytes(replacement)
+
+                with patch.dict(releases.PINS, {component: pin}), patch.object(releases, 'fetch', side_effect=fetch) as network:
+                    self.assertEqual(releases.latest_tag(component), 'v99.0.0')
+                    network.reset_mock()
+                    with self.assertRaisesRegex(AddonError, 'release pin'):
+                        releases.download(component, Path(temp))
+                    self.assertEqual(network.call_count, 1)
+                    self.assertEqual(list(Path(temp).iterdir()), [])
+
+    def test_offline_cache_requires_pinned_bytes(self):
         with tempfile.TemporaryDirectory() as temp:
-            release={'name':'Scalpel.AppImage','sha256':'0'*64,'url':'https://github.com/scalpelpoe/scalpel/releases/download/v1/a','size':5000}
-            def fake(url,limit,destination):destination.write_bytes(b'x'*5000);return 5000
-            with patch('poe2.releases.fetch',side_effect=fake):
-                with self.assertRaisesRegex(AddonError,'checksum'):
-                    releases.download(release,Path(temp))
-            self.assertEqual(list(Path(temp).iterdir()),[])
+            data = b'a' * 5000
+            pin = dict(releases.PINS['scalpel'], size=len(data), sha256=digest(data))
+            cache = Path(temp)
+            asset = cache / (pin['sha256'] + '-' + pin['name'])
+            asset.write_bytes(data)
+            with patch.dict(releases.PINS, scalpel=pin), patch.object(releases, 'fetch', side_effect=AddonError('offline')) as network:
+                selected, path = releases.download('scalpel', cache)
+                self.assertEqual(selected['tag'], pin['tag'])
+                self.assertEqual(path, asset)
+                network.assert_not_called()
+                asset.write_bytes(b'b' * len(data))
+                with self.assertRaisesRegex(AddonError, 'offline'):
+                    releases.download('scalpel', cache)
 
     def test_archive_path_traversal_is_rejected(self):
         result=type('Result',(),{'stdout':b'../escape.dll\n'})()

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+
+- Pin the exact OptiScaler archive and Scalpel AppImage to their SHA-256 digests and sizes. Tool installs and updates reject replacement binaries.
+- Show the installable version separately from the latest upstream release in Tools.
+
 ## 1.2.0
 
 - Install and develop through the Omarchy plugin manager. Retire the separate local installer.

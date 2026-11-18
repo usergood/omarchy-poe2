@@ -212,6 +212,7 @@ class Manager:
                   'build': info['build'] if info else '', 'proton': proton, 'mesa': driver, 'configured': bool(self.state), 'can_rollback': (self.root / 'rollback.json').exists(),
                   'optiscaler': state.get('release', {}).get('tag', ''), 'scalpel': scalpel,
                   'preferences': self.preferences, 'checks': checks, 'warnings': warnings,
+                  'pinned_versions': {name: pin['tag'] for name, pin in releases.PINS.items()},
                   'updates': load(self.root / 'updates.json', {}), 'recovery': (self.root / 'transaction.json').exists()}
         self.save_cache()
         return result
@@ -346,8 +347,7 @@ class Manager:
         info = self.require_game()
         state = copy.deepcopy(self.state or self.adopt_legacy(info))
         self.reconcile(state, info)
-        release = releases.latest('optiscaler')
-        archive = releases.download(release, self.root / 'cache')
+        release, archive = releases.download('optiscaler', self.root / 'cache')
         staged = self.stage_release(release, archive)
         if self.state and self.state.get('release', {}).get('id') != staged['id']:
             # Keep the complete prior registry; its payload and backup blobs are immutable.
@@ -412,8 +412,7 @@ class Manager:
         result = {'checked_at': int(time.time())}
         for component in releases.REPOS:
             try:
-                release = releases.latest(component)
-                result[component] = {'latest': release['tag']}
+                result[component] = {'latest': releases.latest_tag(component)}
             except AddonError as exc:
                 result[component] = {'error': str(exc)}
         atomic(self.root / 'updates.json', json_bytes(result))
@@ -424,8 +423,7 @@ class Manager:
             raise AddonError('Exit Scalpel before replacing its AppImage.')
         if platform.machine() not in {'x86_64', 'AMD64'}:
             raise AddonError('The upstream Scalpel AppImage supports x86_64 only.')
-        release = releases.latest('scalpel')
-        archive = releases.download(release, self.root / 'cache')
+        release, archive = releases.download('scalpel', self.root / 'cache')
         app = self.root / 'apps/Scalpel.AppImage'
         old = load(self.root / 'scalpel.json')
         if app.exists() and old:

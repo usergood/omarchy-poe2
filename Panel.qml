@@ -74,12 +74,12 @@ Panel {
     }
     function releaseAction(component, installed, label) {
         if (!installed) return strings.t("installTool").arg(label)
-        const latest = snapshot.updates?.[component]?.latest
-        const comparison = compareReleaseTags(latest, installed)
+        const pinned = snapshot.pinned_versions?.[component]
+        const comparison = compareReleaseTags(pinned, installed)
         if (comparison === 0) return strings.t("reinstallTool").arg(label)
         if (comparison > 0)
-            return strings.t("updateToolVersion").arg(label).arg(String(latest))
-        return strings.t("refreshTool").arg(label)
+            return strings.t("updateToolVersion").arg(label).arg(String(pinned))
+        return strings.t("installPinned").arg(label).arg(pinned || "…")
     }
     function openScalpelTools() {
         tab = 1
@@ -92,8 +92,13 @@ Panel {
     }
     function checkedVersion(name) {
         var entry = snapshot.updates ? snapshot.updates[name] : null
-        if (!entry) return strings.t("notChecked")
-        return entry.latest ? strings.t("latest").arg(String(entry.latest).slice(0, 40)) : strings.t("checkFailed")
+        const pinned = snapshot.pinned_versions?.[name]
+        if (!pinned) return strings.t("loading")
+        const available = strings.t("pinnedVersion").arg(pinned)
+        if (!entry) return available + "\n" + strings.t("notChecked")
+        if (!entry.latest) return available + "\n" + strings.t("checkFailed")
+        const upstream = strings.t("latest").arg(String(entry.latest).slice(0, 40))
+        return available + "\n" + upstream + (compareReleaseTags(entry.latest, pinned) > 0 ? "\n" + strings.t("pinUpdateHint") : "")
     }
     onOpenedChanged: {
         if (opened) refresh()
