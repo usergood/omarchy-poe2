@@ -4,6 +4,7 @@
   "original": "Original rendering",
   "fsr4": "FSR4 · DirectX 12",
   "needs_repair": "Profile needs repair",
+  "unpinned": "Pinned FSR4 release required",
   "unmanaged": "Existing mod detected",
   "missing": "PoE 2 is not installed",
   "play": "Play",

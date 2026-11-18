@@ -50,6 +50,9 @@ class Fixture(unittest.TestCase):
         self.config.parent.mkdir(parents=True)
         self.config.write_bytes(CONFIG)
         self.data = self.root/'data'
+        fixture_pin = patch.dict(releases.PINS, optiscaler=dict(releases.PINS['optiscaler'], sha256='a'))
+        fixture_pin.start()
+        self.addCleanup(fixture_pin.stop)
         self.manager = Manager(self.data,self.home)
         self.config_home = patch.dict(os.environ, {'XDG_CONFIG_HOME': str(self.home / '.config')})
         self.config_home.start()
@@ -120,6 +123,39 @@ class SteamTests(Fixture):
 
 
 class ManagerTests(Fixture):
+    def test_legacy_managed_scalpel_requires_actual_pinned_bytes_to_launch(self):
+        app = self.data / 'apps/Scalpel.AppImage'
+        trusted = b'pinned build'
+        other = b'legacy build'
+        pin = dict(releases.PINS['scalpel'], size=len(trusted), sha256=digest(trusted))
+        atomic(app, other, executable=True)
+        atomic(self.data / 'scalpel.json', json_bytes(dict(pin, sha256=digest(other))))
+        with patch.dict(releases.PINS, scalpel=pin), patch('poe2.manager.subprocess.Popen') as launch:
+            self.assertFalse(self.manager.scalpel()['available'])
+            # Even a stale locally cached hash must not authorize a launch.
+            self.manager.hash_cache[str(app)]['sha256'] = pin['sha256']
+            with self.assertRaisesRegex(AddonError, 'Reinstall'):
+                self.manager.launch_scalpel(focus=True)
+            launch.assert_not_called()
+            atomic(app, trusted, executable=True)
+            self.manager.launch_scalpel()
+            self.assertEqual(launch.call_args.args[0][0], str(app))
+
+    def test_changed_optiscaler_pin_blocks_launch_and_repair_but_allows_restore(self):
+        self.install()
+        with patch.dict(releases.PINS['optiscaler'], sha256='new-pin'):
+            self.assertEqual(self.manager.status()['profile'], 'unpinned')
+            with patch('poe2.manager.subprocess.Popen') as launch:
+                with self.assertRaisesRegex(AddonError, 'pinned FSR4'):
+                    self.manager.launch_game()
+                launch.assert_not_called()
+            with self.assertRaisesRegex(AddonError, 'plugin pin'):
+                self.manager.repair()
+            self.manager.switch('original')
+            self.assertFalse((self.game / 'dxgi.dll').exists())
+            with self.assertRaisesRegex(AddonError, 'plugin pin'):
+                self.manager.switch('fsr4')
+
     def test_clean_install_and_restore_are_reversible(self):
         result=self.install()
         self.assertEqual(result['profile'],'fsr4')
@@ -196,7 +232,10 @@ class ManagerTests(Fixture):
         mapping['new-sdk.dll']=self.manager.store.put(b'new optional SDK')
         atomic(self.data/'payloads/b/files.json',json_bytes(mapping))
         atomic(self.data/'rollback.json',json_bytes(previous))
-        self.manager.apply(info,state,'fsr4')
+        with patch.dict(releases.PINS['optiscaler'], sha256='b'):
+            self.manager.apply(info,state,'fsr4')
+            with self.assertRaisesRegex(AddonError, 'plugin pin'):
+                self.manager.rollback()
         self.manager.rollback()
         self.assertEqual((self.game/'dxgi.dll').read_bytes(),b'OptiScaler one')
         self.assertFalse((self.game/'new-sdk.dll').exists())

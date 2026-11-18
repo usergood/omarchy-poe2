@@ -234,7 +234,7 @@ change, including a popup text role that differs from desktop text.
 
 ## Releases
 
-The [tool release pins](../poe2/release-pins.json) record the exact upstream tag, asset filename, size in bytes and SHA-256 for each managed download. Install and reinstall use these pins even after an upstream check. A replaced asset fails verification. Existing managed installations, local repair payloads and backups remain available.
+The [tool release pins](../poe2/release-pins.json) record the exact upstream tag, asset filename, size in bytes and SHA-256 for each managed download. Install and reinstall use these pins even after an upstream check. A replaced asset fails verification. Before launching a managed Scalpel AppImage, the plugin hashes its bytes against the current pin. If an older installation differs, reinstall Scalpel from Tools. FSR4 launch, repair and rollback require a saved release staged from the pinned archive. When a plugin update changes that pin, install the matching FSR4 release from Tools or restore Original.
 
 To update a pin, obtain the intended asset from the official release, compute its size and SHA-256 locally, and compare both with GitHub’s release metadata. Review compatibility and the pin diff in a pull request before releasing the plugin. An automated updater can propose that pull request using the same file.
 
