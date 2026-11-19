@@ -157,6 +157,7 @@ State is stored under `~/.local/share/omarchy/poe2-addon/` (or `POE2_ADDON_DATA`
 - `payloads/`, `cache/`: verified releases for offline repair and rollback.
 - `transaction.json`: recovery journal only while changing files.
 - `scalpel-launch.log`: bounded launcher diagnostics, not game/chat contents.
+- `pob-redux-launch.log`: diagnostic output from starting the PoB Redux AppImage.
 
 No scheduled network access or telemetry is added. Update buttons contact only
 `api.github.com`, the official upstream repositories and GitHub's release-asset hosts.
@@ -234,9 +235,9 @@ change, including a popup text role that differs from desktop text.
 
 ## Releases
 
-The [tool release pins](../poe2/release-pins.json) record the exact upstream tag, asset filename, size in bytes and SHA-256 for each managed download. Install and reinstall use these pins even after an upstream check. A replaced asset fails verification. Before launching a managed Scalpel AppImage, the plugin hashes its bytes against the current pin. If an older installation differs, reinstall Scalpel from Tools. FSR4 launch, repair and rollback require a saved release staged from the pinned archive. When a plugin update changes that pin, install the matching FSR4 release from Tools or restore Original.
+The [tool release pins](../poe2/release-pins.json) record the exact upstream tag, asset filename, size in bytes and SHA-256 for each managed download. Install and reinstall use these pins even after an upstream check. A replaced asset fails verification. Before launching a managed Scalpel or PoB Redux AppImage, the plugin hashes its bytes against the current pin. If an older installation differs, reinstall the AppImage from Tools. FSR4 launch, repair and rollback require a saved release staged from the pinned archive. When a plugin update changes that pin, install the matching FSR4 release from Tools or restore Original.
 
-A T3 Code scheduled task checks both upstreams every 12 hours and reports the
+A T3 Code scheduled task checks the pinned tools' upstreams every 12 hours and reports the
 result in its thread. It dispatches the Dependency release workflow when a newer
 stable tag is available or an earlier dependency release still needs publishing.
 For a newer stable tag, it compares the official asset's downloaded size and
@@ -244,9 +245,10 @@ SHA-256 with GitHub's release metadata. One pull request updates all verified
 pins, bumps the patch version in `manifest.json` and `poe2/__init__.py`, and
 adds notes to `CHANGELOG.md`. Both Python jobs in the Test workflow must pass
 before the bot squash-merges the PR and publishes the tagged GitHub release.
-Ordinary pushes run tests. The workflow skips publication when both
+Ordinary pushes run tests. The workflow skips publication when all
 pins are current and retries an unfinished release from its merged commit.
 
 Upstreams: [OptiScaler](https://github.com/optiscaler/OptiScaler),
 [PoE 2 compatibility](https://github.com/optiscaler/OptiScaler/wiki/Path-of-Exile-2),
-[Scalpel](https://github.com/scalpelpoe/scalpel). Their licenses remain their own.
+[Scalpel](https://github.com/scalpelpoe/scalpel) and [PoB Redux](https://github.com/pobredux/pob-redux).
+Each tool has its own license.

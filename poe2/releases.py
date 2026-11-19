@@ -12,7 +12,8 @@ import urllib.request
 
 from .storage import AddonError, digest
 
-REPOS = {'optiscaler': 'optiscaler/OptiScaler', 'scalpel': 'scalpelpoe/scalpel'}
+REPOS = {'optiscaler': 'optiscaler/OptiScaler', 'scalpel': 'scalpelpoe/scalpel',
+         'pob_redux': 'pobredux/pob-redux'}
 PINS = json.loads(Path(__file__).with_name('release-pins.json').read_text())
 STABLE_TAG = re.compile(r'v?\d+\.\d+\.\d+[a-z]?')
 MAX_DOWNLOAD = 350 * 1024 * 1024

@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "usergood.poe2",
   "name": "PoE 2",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "author": "usergood",
   "license": "MIT",
-  "description": "Launch Path of Exile 2 from your Omarchy bar, open trade, and manage Scalpel and reversible FSR4 profiles.",
+  "description": "Launch Path of Exile 2 from your Omarchy bar, open trade, and manage Scalpel, PoB Redux and reversible FSR4 profiles.",
   "kinds": ["bar-widget"],
   "entryPoints": {"barWidget": "Panel.qml"},
   "barWidget": {"displayName": "PoE 2", "description": "Play, trade, price check and manage FSR4", "category": "Gaming", "allowMultiple": false, "defaultSection": "right"}

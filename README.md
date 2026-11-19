@@ -52,6 +52,12 @@ By default, the plugin starts Scalpel with PoE 2. If Scalpel still needs setup,
 it opens Scalpel first and waits for you to finish. Click **Launch PoE 2** again
 when you are ready. You can turn automatic startup off under **Settings**.
 
+### Plan builds with PoB Redux
+
+In **Tools**, choose **Install PoB Redux AppImage**, then **Open PoB Redux**.
+Choose **PoE 2** in PoB Redux to start planning builds. Update the managed
+AppImage from **Tools** after updating the plugin to a release with a newer pin.
+
 ### Try FSR4 upscaling
 
 This optional OptiScaler preset targets AMD RDNA2/3 GPUs. Extraction uses `bsdtar`
@@ -100,7 +106,7 @@ Esc cancels recording. The new shortcut applies the next time you launch the gam
 ## Updates and common questions
 
 - **Update the plugin:** use Omarchy's plugin manager.
-- **Update Scalpel or FSR4:** open **Tools** to see the version pinned by this plugin. **Check updates** also shows the latest upstream version. To install a newer upstream version, first update to a plugin release that pins it. Each managed download must match the pinned size and SHA-256.
+- **Update Scalpel, PoB Redux or FSR4:** open **Tools** to see the version pinned by this plugin. **Check updates** also shows the latest upstream version. To install a newer upstream version, first update to a plugin release that pins it. Each managed download must match the pinned size and SHA-256.
 - **Old icon or layout after updating?** Run `omarchy restart shell` once.
 - **Game not found?** Check that PoE 2 is installed in regular Steam, then launch it once from Steam.
 - **Buttons are dimmed?** Fully exit PoE 2 and Steam before changing graphics settings, shortcuts or profiles.
@@ -108,7 +114,7 @@ Esc cancels recording. The new shortcut applies the next time you launch the gam
 
 ## Remove the plugin
 
-If you used only the launcher, trade or Scalpel, go straight to the removal command below.
+If you used only the launcher, trade, Scalpel or PoB Redux, go straight to the removal command below.
 
 If you used FSR4, close PoE 2 and fully exit Steam. In **Play**, select
 **Original** and wait for the restoration to succeed before removing the widget.
@@ -120,7 +126,7 @@ omarchy plugin remove usergood.poe2
 ```
 
 Confirm removal when prompted. Omarchy removes the widget. The plugin's saved
-preferences, recovery backups and any managed Scalpel AppImage remain in
+preferences, recovery backups and managed AppImages remain in
 `~/.local/share/omarchy/poe2-addon/`. Keep the backups until you have verified
 that the game launches with the restored settings.
 
@@ -133,5 +139,6 @@ FSR4 uses a third-party game modification; review the upstream compatibility and
 
 ## License
 
-The plugin is available under the [MIT License](LICENSE). Scalpel and OptiScaler
-are optional external downloads governed by their own licenses.
+The plugin is available under the [MIT License](LICENSE). Scalpel, OptiScaler and
+[PoB Redux](https://github.com/pobredux/pob-redux) are optional external downloads
+governed by their own licenses.

@@ -21,6 +21,7 @@ Panel {
     readonly property var prefs: snapshot.preferences || ({})
     readonly property bool gameRunning: apps.indexOf("game") >= 0
     readonly property bool scalpelRunning: apps.indexOf("scalpel") >= 0
+    readonly property bool pobReduxRunning: apps.indexOf("pob_redux") >= 0
     readonly property bool steamRunning: apps.indexOf("steam") >= 0
     readonly property bool profileNeedsAttention: ["needs_repair", "unmanaged", "unpinned"].indexOf(snapshot.profile) >= 0
     readonly property bool repairRequired: snapshot.profile === "needs_repair" && snapshot.configured === true
@@ -540,6 +541,28 @@ Panel {
                                 onClicked: root.run(["install-scalpel"])
                             }
                             Caption { width: parent.width; text: strings.t("managedHint") }
+                        }
+                        SectionCard {
+                            width: parent.width
+                            CardTitle { text: "PoB Redux" }
+                            Caption { width: parent.width; text: strings.t("pobReduxSummary") }
+                            Caption { width: parent.width; text: strings.t("pobReduxVersion").arg(String(root.snapshot.pob_redux?.version || strings.t("notInstalled"))) }
+                            Caption { width: parent.width; text: root.checkedVersion("pob_redux") }
+                            ActionButton {
+                                width: parent.width
+                                text: root.releaseAction("pob_redux", root.snapshot.pob_redux?.version, "PoB Redux AppImage")
+                                enabled: root.initialized && !root.busy && !root.pobReduxRunning && root.snapshot.checks?.x86_64 === true
+                                bordered: true
+                                onClicked: root.run(["install-pob-redux"])
+                            }
+                            ActionButton {
+                                width: parent.width
+                                visible: root.snapshot.pob_redux?.available === true
+                                text: strings.t("launchPobRedux")
+                                enabled: !root.busy
+                                bordered: true
+                                onClicked: root.run(["launch-pob-redux"])
+                            }
                         }
                         Caption {
                             width: parent.width

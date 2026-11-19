@@ -19,7 +19,8 @@ def run(argv=None):
     parser = argparse.ArgumentParser(description='Omarchy PoE 2 addon')
     sub = parser.add_subparsers(dest='action', required=True)
     for name in ['status', 'original', 'fsr4', 'repair', 'install-optiscaler', 'rollback', 'check-updates',
-                 'install-scalpel', 'launch', 'launch-scalpel', 'trade', 'exit-steam', 'install-game', 'recover', 'reset-setup']:
+                 'install-scalpel', 'install-pob-redux', 'launch', 'launch-scalpel', 'launch-pob-redux',
+                 'trade', 'exit-steam', 'install-game', 'recover', 'reset-setup']:
         sub.add_parser(name)
     config = sub.add_parser('configure')
     config.add_argument('--quality', choices=['Quality', 'Balanced', 'Performance'])
@@ -54,7 +55,8 @@ def run(argv=None):
             return result
         methods = {'repair': manager.repair, 'install-optiscaler': manager.install_optiscaler,
                    'rollback': manager.rollback, 'check-updates': manager.check_updates,
-                   'install-scalpel': manager.install_scalpel, 'reset-setup': manager.reset_setup}
+                   'install-scalpel': manager.install_scalpel, 'install-pob-redux': manager.install_pob_redux,
+                   'reset-setup': manager.reset_setup}
         if action in methods:
             result = methods[action]()
             result['message'] = {'repair': 'Your saved settings and game integration have been reapplied.',
@@ -62,6 +64,7 @@ def run(argv=None):
                                  'rollback': 'The previous OptiScaler version has been restored.',
                                  'check-updates': 'Update checks finished.',
                                  'install-scalpel': 'Verified Scalpel AppImage installed for your user.',
+                                 'install-pob-redux': 'Verified PoB Redux AppImage installed for your user.',
                                  'reset-setup': 'Setup registry reset; original backups have been retained.'}[action]
             return result
         if action == 'configure':
@@ -76,6 +79,8 @@ def run(argv=None):
             message = manager.launch_game()
         elif action == 'launch-scalpel':
             message = manager.launch_scalpel(focus=True)
+        elif action == 'launch-pob-redux':
+            message = manager.launch_pob_redux()
         elif action == 'exit-steam':
             if 'game' in steam.processes():
                 raise AddonError('Exit PoE 2 before asking Steam to shut down.')

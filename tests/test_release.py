@@ -46,20 +46,26 @@ class ReleaseTests(unittest.TestCase):
 
     def upstream(self, tag, component):
         repo = updater.releases.REPOS[component]
-        name = updater.releases.PINS[component]['name']
+        name = (f'PoB.Redux_{tag.removeprefix("v")}_amd64.AppImage' if component == 'pob_redux'
+                else updater.releases.PINS[component]['name'])
         url = f'https://github.com/{repo}/releases/download/{tag}/{name}'
         payload = component.encode() * 1024
+        assets = [{'name': name, 'size': len(payload), 'state': 'uploaded',
+                   'digest': 'sha256:' + updater.digest(payload), 'browser_download_url': url}]
+        if component == 'pob_redux':
+            assets.append({'name': name.replace('amd64', 'aarch64')})
         return {
-            'tag_name': tag, 'draft': False, 'prerelease': False,
-            'assets': [{'name': name, 'size': len(payload), 'state': 'uploaded',
-                        'digest': 'sha256:' + updater.digest(payload), 'browser_download_url': url}],
+            'tag_name': tag, 'draft': False, 'prerelease': False, 'assets': assets,
         }, payload
 
-    def run_update(self, optiscaler, scalpel):
+    def run_update(self, optiscaler, scalpel, pob_redux=None):
         pins = self.root / 'poe2/release-pins.json'
         pins.write_text(json.dumps(updater.releases.PINS))
+        if pob_redux is None:
+            pob_redux = self.upstream(updater.releases.PINS['pob_redux']['tag'], 'pob_redux')
         responses = {updater.releases.REPOS['optiscaler']: optiscaler,
-                     updater.releases.REPOS['scalpel']: scalpel}
+                     updater.releases.REPOS['scalpel']: scalpel,
+                     updater.releases.REPOS['pob_redux']: pob_redux}
 
         def fetch(url, limit, destination=None):
             for repo, (metadata, payload) in responses.items():
@@ -80,24 +86,26 @@ class ReleaseTests(unittest.TestCase):
         changed, pins, requests = self.run_update(self.upstream(current, 'optiscaler'),
                                                   self.upstream('v0.0.1', 'scalpel'))
         self.assertFalse(changed)
-        self.assertEqual(requests, 2)
+        self.assertEqual(requests, 3)
         self.assertEqual(pins, updater.releases.PINS)
         self.assertEqual(release.metadata(self.root)[0], 'v1.1.0')
 
-    def test_two_upstream_updates_create_one_patch_version(self):
+    def test_three_upstream_updates_create_one_patch_version(self):
         optiscaler = self.upstream('v99.1.0', 'optiscaler')
         scalpel = self.upstream('v99.2.0', 'scalpel')
-        changed, pins, requests = self.run_update(optiscaler, scalpel)
+        pob_redux = self.upstream('v99.3.0', 'pob_redux')
+        changed, pins, requests = self.run_update(optiscaler, scalpel, pob_redux)
         self.assertTrue(changed)
-        self.assertEqual(requests, 4)
+        self.assertEqual(requests, 6)
         tag, notes = release.metadata(self.root)
         self.assertEqual(tag, 'v1.1.1')
-        for component, (metadata, payload) in [('optiscaler', optiscaler), ('scalpel', scalpel)]:
+        for component, (metadata, payload) in [('optiscaler', optiscaler), ('scalpel', scalpel),
+                                                ('pob_redux', pob_redux)]:
             self.assertEqual(pins[component], {'tag': metadata['tag_name'], 'size': len(payload),
                                                'name': metadata['assets'][0]['name'], 'sha256': updater.digest(payload)})
             self.assertIn(metadata['tag_name'], notes)
 
-    def test_failed_asset_verification_leaves_both_pins_and_version_intact(self):
+    def test_failed_asset_verification_leaves_pins_and_version_intact(self):
         optiscaler = self.upstream('v99.1.0', 'optiscaler')
         metadata, payload = self.upstream('v99.2.0', 'scalpel')
         with self.assertRaisesRegex(ValueError, 'failed size or SHA-256 verification'):
