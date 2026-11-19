@@ -16,8 +16,9 @@ from poe2.storage import digest
 ASSET_NAMES = {
     'optiscaler': re.compile(r'OptiScaler[_-][A-Za-z0-9._-]+\.7z', re.IGNORECASE | re.ASCII),
     'scalpel': re.compile(r'Scalpel\.AppImage'),
+    'pob_redux': re.compile(r'PoB\.Redux_\d+\.\d+\.\d+[a-z]?_amd64\.AppImage', re.ASCII),
 }
-DISPLAY_NAMES = {'optiscaler': 'OptiScaler', 'scalpel': 'Scalpel'}
+DISPLAY_NAMES = {'optiscaler': 'OptiScaler', 'scalpel': 'Scalpel', 'pob_redux': 'PoB Redux'}
 
 
 def version_key(tag):

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0
+
+- Install and open the SHA-256-verified [PoB Redux v0.5.15 AppImage](https://github.com/pobredux/pob-redux/releases/tag/v0.5.15) for x86-64 from Tools.
+- Check for PoB Redux updates alongside Scalpel and OptiScaler.
+
 ## 1.2.2
 
 - Verify the managed Scalpel AppImage against the bundled size and SHA-256 before launch, including after upgrades from older widget versions.

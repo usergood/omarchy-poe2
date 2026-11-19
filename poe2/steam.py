@@ -152,6 +152,8 @@ def processes():
                 found.add('game')
             if exe == 'scalpel' or comm == 'scalpel':
                 found.add('scalpel')
+            if exe == 'pob-redux' or comm == 'pob-redux':
+                found.add('pob_redux')
         except OSError:
             pass
     return sorted(found)

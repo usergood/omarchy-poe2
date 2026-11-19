@@ -343,6 +343,39 @@ class ManagerTests(Fixture):
             self.assertNotIn('shell',kwargs)
 
 
+class PobReduxTests(Fixture):
+    def test_verified_appimage_installs_and_launches_without_steam(self):
+        payload = b'PoB Redux AppImage' * 1024
+        pin = dict(releases.PINS['pob_redux'], size=len(payload), sha256=digest(payload))
+        self.manifest.unlink()
+        app = self.data / 'apps/PoB.Redux.AppImage'
+
+        def fetch(url, limit, destination):
+            self.assertEqual(url, f"https://github.com/pobredux/pob-redux/releases/download/{pin['tag']}/{pin['name']}")
+            destination.write_bytes(payload)
+            return len(payload)
+
+        with patch.dict(releases.PINS, pob_redux=pin), patch.object(releases, 'fetch', side_effect=fetch), \
+                patch('poe2.manager.platform.machine', return_value='x86_64'), \
+                patch.object(self.manager, 'launch_companion') as launch:
+            with self.assertRaisesRegex(AddonError, 'Install PoB Redux'):
+                self.manager.launch_pob_redux()
+            status = self.manager.install_pob_redux()
+            self.assertFalse(status['game_installed'])
+            self.assertTrue(status['pob_redux']['available'])
+            self.assertEqual(status['pob_redux']['version'], pin['tag'])
+            self.assertEqual(app.read_bytes(), payload)
+            self.assertTrue(os.access(app, os.X_OK))
+            launch.assert_not_called()
+            self.manager.launch_pob_redux()
+            launch.assert_called_once_with([str(app)], 'pob-redux')
+            launch.reset_mock()
+            app.write_bytes(b'x' * len(payload))
+            with self.assertRaisesRegex(AddonError, 'differs from the plugin pin'):
+                self.manager.launch_pob_redux()
+            launch.assert_not_called()
+
+
 class ScalpelTests(Fixture):
     def setUp(self):
         super().setUp()

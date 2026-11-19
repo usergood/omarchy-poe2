@@ -19,6 +19,7 @@ from .storage import AddonError, Store, atomic, digest, json_bytes, load
 DEFAULTS = {'quality': 'Quality', 'watermark': False, 'diagnostics': False,
             'menu_key': '0xDC', 'auto_scalpel': True, 'steam_root': '', 'account': ''}
 TRADE_URL = 'https://www.pathofexile.com/trade2'
+POB_REDUX_APPIMAGE = 'PoB.Redux.AppImage'
 
 
 class Manager:
@@ -142,14 +143,20 @@ class Manager:
             return 'needs_repair', 'An unexpected dxgi.dll is present in Original mode.'
         return self.state['mode'], 'Ready. FSR4 image quality and performance still depend on the game and GPU.' if self.state['mode'] == 'fsr4' else 'Ready with original game files.'
 
+    def managed_appimage(self, component, name, *, verify_for_launch=False):
+        managed = self.root / 'apps' / name
+        if not managed.exists() and not managed.is_symlink():
+            return None
+        pin = releases.PINS[component]
+        if (managed.is_symlink() or not managed.is_file() or managed.stat().st_size != pin['size']
+                or self.file_hash(managed, refresh=verify_for_launch) != pin['sha256']):
+            return {'available': False, 'source': 'managed', 'version': 'reinstall pinned AppImage from Tools'}
+        return {'available': True, 'source': 'managed', 'version': pin['tag'], 'path': str(managed)}
+
     def scalpel(self, *, verify_for_launch=False):
-        managed = self.root / 'apps/Scalpel.AppImage'
-        if managed.exists() or managed.is_symlink():
-            pin = releases.PINS['scalpel']
-            if (managed.is_symlink() or not managed.is_file() or managed.stat().st_size != pin['size']
-                    or self.file_hash(managed, refresh=verify_for_launch) != pin['sha256']):
-                return {'available': False, 'source': 'managed', 'version': 'reinstall pinned AppImage from Tools'}
-            return {'available': True, 'source': 'managed', 'version': pin['tag'], 'path': str(managed)}
+        managed = self.managed_appimage('scalpel', 'Scalpel.AppImage', verify_for_launch=verify_for_launch)
+        if managed:
+            return managed
         command = shutil.which('scalpel-poe')
         if command:
             version = 'package-managed'
@@ -218,10 +225,11 @@ class Manager:
             warnings.append('The bar widget is designed for Omarchy on Hyprland.')
         state = self.state or {}
         scalpel = dict(self.scalpel(), setup=self.scalpel_setup())
+        pob_redux = self.managed_appimage('pob_redux', POB_REDUX_APPIMAGE)
         result = {'ok': True, 'addon_version': __version__, 'profile': profile, 'selected': state.get('mode', 'original'),
                   'detail': detail, 'running': steam.processes(), 'game_installed': bool(info and info['installed']),
                   'build': info['build'] if info else '', 'proton': proton, 'mesa': driver, 'configured': bool(self.state), 'can_rollback': self.pinned_optiscaler(load(self.root / 'rollback.json')),
-                  'optiscaler': state.get('release', {}).get('tag', ''), 'scalpel': scalpel,
+                  'optiscaler': state.get('release', {}).get('tag', ''), 'scalpel': scalpel, 'pob_redux': pob_redux,
                   'preferences': self.preferences, 'checks': checks, 'warnings': warnings,
                   'pinned_versions': {name: pin['tag'] for name, pin in releases.PINS.items()},
                   'updates': load(self.root / 'updates.json', {}), 'recovery': (self.root / 'transaction.json').exists()}
@@ -446,6 +454,31 @@ class Manager:
         self.hash_cache = {}
         return self.status()
 
+    def install_pob_redux(self):
+        if platform.machine() not in {'x86_64', 'AMD64'}:
+            raise AddonError('The PoB Redux AppImage managed by this addon requires x86_64.')
+        if 'pob_redux' in steam.processes():
+            raise AddonError('Exit PoB Redux before replacing its AppImage.')
+        _, archive = releases.download('pob_redux', self.root / 'cache')
+        atomic(self.root / 'apps' / POB_REDUX_APPIMAGE, archive.read_bytes(), executable=True)
+        return self.status()
+
+    def launch_pob_redux(self):
+        info = self.managed_appimage('pob_redux', POB_REDUX_APPIMAGE, verify_for_launch=True)
+        if not info:
+            raise AddonError('Install PoB Redux from Tools first.')
+        if not info['available']:
+            raise AddonError('The managed PoB Redux AppImage differs from the plugin pin. Reinstall it from Tools.')
+        self.launch_companion([info['path']], 'pob-redux')
+        return 'PoB Redux launch requested.'
+
+    def launch_companion(self, command, name, *, env=None):
+        log = self.root / f'{name}-launch.log'
+        if log.exists() and log.stat().st_size > 2 * 1024 * 1024:
+            os.replace(log, self.root / f'{name}-launch.previous.log')
+        with log.open('ab') as output:
+            subprocess.Popen(command, env=env, stdout=output, stderr=output, start_new_session=True)
+
     def launch_scalpel(self, *, focus=False):
         running = 'scalpel' in steam.processes()
         if running and not focus:
@@ -461,12 +494,7 @@ class Manager:
             atomic(config, json_bytes({'poeVersion': 2, 'onboardingSelectedGames': {'poe1': False, 'poe2': True}}))
         env = dict(os.environ, XDG_SESSION_TYPE='x11')
         # This applies only to the Electron app; never to Steam or the desktop session.
-        command = [info['path'], '--ozone-platform=x11']
-        log = self.root / 'scalpel-launch.log'
-        if log.exists() and log.stat().st_size > 2 * 1024 * 1024:
-            os.replace(log, self.root / 'scalpel-launch.previous.log')
-        with log.open('ab') as output:
-            subprocess.Popen(command, env=env, stdout=output, stderr=output, start_new_session=True)
+        self.launch_companion([info['path'], '--ozone-platform=x11'], 'scalpel', env=env)
         # Upstream's single-instance handler shows the window on a second launch.
         if running:
             return 'Scalpel window requested.'
