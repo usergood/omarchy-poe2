@@ -236,8 +236,9 @@ change, including a popup text role that differs from desktop text.
 
 The [tool release pins](../poe2/release-pins.json) record the exact upstream tag, asset filename, size in bytes and SHA-256 for each managed download. Install and reinstall use these pins even after an upstream check. A replaced asset fails verification. Before launching a managed Scalpel AppImage, the plugin hashes its bytes against the current pin. If an older installation differs, reinstall Scalpel from Tools. FSR4 launch, repair and rollback require a saved release staged from the pinned archive. When a plugin update changes that pin, install the matching FSR4 release from Tools or restore Original.
 
-A T3 Code scheduled task dispatches the Dependency release workflow every 12
-hours to check both upstreams.
+A T3 Code scheduled task checks both upstreams every 12 hours and reports the
+result in its thread. It dispatches the Dependency release workflow when a newer
+stable tag is available or an earlier dependency release still needs publishing.
 For a newer stable tag, it compares the official asset's downloaded size and
 SHA-256 with GitHub's release metadata. One pull request updates all verified
 pins, bumps the patch version in `manifest.json` and `poe2/__init__.py`, and
