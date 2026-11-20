@@ -1,5 +1,10 @@
 # Omarchy PoE 2
 
+Add **AMD FSR 4.1 upscaling** to Path of Exile 2 on Omarchy with the pinned
+OptiScaler preset. AMD Radeon **RX 6000**, **RX 7000**, and **RX 9000** series
+desktop graphics cards are supported by the bundled FSR SDK. The widget also
+launches the game, opens official trade, and manages Scalpel and PoB Redux.
+
 ![Path of Exile 2 — launch, trade and switch profiles from the Omarchy bar](docs/screenshots/cover.png)
 
 ## Install
@@ -58,10 +63,12 @@ In **Tools**, choose **Install PoB Redux AppImage**, then **Open PoB Redux**.
 Choose **PoE 2** in PoB Redux to start planning builds. Update the managed
 AppImage from **Tools** after updating the plugin to a release with a newer pin.
 
-### Try FSR4 upscaling
+### Enable FSR 4.1 upscaling
 
-This optional OptiScaler preset targets AMD RDNA2/3 GPUs. Extraction uses `bsdtar`
-from `libarchive`. See the [GPU, Vulkan and driver requirements](docs/technical-reference.md#compatibility-and-dependencies).
+The preset uses the FSR 4.1.2 SDK bundled with [OptiScaler v0.9.5](https://github.com/optiscaler/OptiScaler/releases/tag/v0.9.5).
+The plugin's in-game test used an RX 6700 XT. Use current Vulkan drivers and a
+recent Proton build with FSR 4.1.2 support. Extraction uses `bsdtar` from
+`libarchive`. See the [GPU and driver requirements](docs/technical-reference.md#compatibility-and-dependencies).
 
 1. In Steam, open PoE 2's **Properties → Compatibility** and select a recent GE-Proton or Proton Experimental.
 2. Close PoE 2 and fully exit Steam.
@@ -106,7 +113,7 @@ Esc cancels recording. The new shortcut applies the next time you launch the gam
 ## Updates and common questions
 
 - **Update the plugin:** use Omarchy's plugin manager.
-- **Update Scalpel, PoB Redux or FSR4:** open **Tools** to see the version pinned by this plugin. **Check updates** also shows the latest upstream version. To install a newer upstream version, first update to a plugin release that pins it. Each managed download must match the pinned size and SHA-256.
+- **Update Scalpel, PoB Redux or FSR4:** open **Tools** to see the version pinned by this plugin. **Check updates** displays upstream versions for reference. Installable releases come from the bundled [release pins](poe2/release-pins.json), which specify the exact tag, filename, size and SHA-256 of each asset. Update the plugin to install a newer pinned version.
 - **Old icon or layout after updating?** Run `omarchy restart shell` once.
 - **Game not found?** Check that PoE 2 is installed in regular Steam, then launch it once from Steam.
 - **Buttons are dimmed?** Fully exit PoE 2 and Steam before changing graphics settings, shortcuts or profiles.

@@ -32,10 +32,11 @@ with `omarchy plugin disable local.poe2-profiles`.
 - Omarchy's plugin-capable Quickshell bar on Hyprland; Linux x86_64.
 - Python 3.10+, native Steam, `xdg-utils`, and `libarchive` (`bsdtar`).
 - PoE 2 installed through Steam. Launch it once and exit before setting up FSR4.
-- A recent GE-Proton or Proton Experimental selected in Steam's Compatibility settings.
-- For FSR4: suitable GPU support and current Vulkan drivers. This release's preset targets
-  **AMD RDNA2/3 INT8**, tested with an RX 6700 XT, Mesa 26.2.5 and GE-Proton 11-12.
-  Mesa 25.2+ is the documented baseline. Other GPUs are not validated by this addon.
+- For FSR 4.1: current Vulkan drivers and a recent GE-Proton or Proton Experimental
+  with VKD3D support for FidelityFX SDK 2.4. Select it in Steam's Compatibility settings.
+- The bundled FSR 4.1.2 SDK supports AMD Radeon RX 6000 (RDNA 2), RX 7000
+  (RDNA 3), and RX 9000 (RDNA 4) desktop graphics cards. The plugin was tested
+  with an RX 6700 XT, Mesa 26.2.5, and GE-Proton 11-12.
 - Scalpel and the game should run through XWayland for the existing input hooks.
   The addon forces X11 only for Scalpel; it does not change the desktop session or Steam's environment.
 
@@ -59,8 +60,8 @@ paid game or signs into accounts on your behalf.
 
 **Original** restores game files and the graphics settings captured before the mod.
 It normally uses Vulkan, but the addon preserves your actual original renderer.
-**FSR4** selects DirectX 12, uses DLSS as OptiScaler's input, forces the SDK's INT8 model,
-turns off dynamic resolution, and keeps frame generation disabled.
+**FSR4** selects DirectX 12, uses DLSS as OptiScaler's input, and uses the
+bundled FidelityFX SDK. It turns off dynamic resolution and keeps frame generation disabled.
 
 FSR4 improves image reconstruction but is not guaranteed to improve FPS. INT8 processing
 on RDNA2 costs GPU time; the renderer and scaling preset also affect the comparison.
@@ -69,7 +70,8 @@ First-run shader compilation can cause additional stutter. The addon does not si
 change graphics quality to conceal a performance regression.
 
 The watermark is **off** and logging is **off** by default. Enable the watermark
-briefly after an upgrade to verify `FSR4`/`FSR4-i8` rather than `FSR3` fallback.
+after an upgrade to check the active model. The SDK may show `FSR4` on RX 9000,
+`FSR4-i8` on RX 7000, or `FSR4-i8-2` on RX 6000. `FSR3` means the upscaler fell back.
 Selecting FSR4 or seeing its DLL loaded alone does not establish that the model runs.
 Diagnostic logging is Info-level only; per-frame Trace logging is never enabled.
 

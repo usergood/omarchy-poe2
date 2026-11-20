@@ -53,7 +53,7 @@
   "diagnostics": "Diagnostic logging",
   "diagnosticsHint": "Info-level logs only; per-frame tracing stays off.",
   "fgHint": "Frame generation is disabled for a consistent first test.",
-  "gpuHint": "The FSR4 preset targets AMD RDNA2/3 INT8. Speed and compatibility depend on your GPU, Mesa and Proton.",
+  "gpuHint": "The FSR 4.1 SDK supports AMD Radeon RX 6000, RX 7000 and RX 9000 desktop graphics cards. Use current Mesa and Proton versions.",
   "working": "Working…",
   "done": "Done.",
   "error": "Could not read the addon response.",

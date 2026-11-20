@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+
+- Document AMD FSR 4.1 support for Radeon RX 6000, RX 7000 and RX 9000 cards in the README and plugin description.
+- Pin the x86-64 [PoB Redux v0.5.17 AppImage](https://github.com/pobredux/pob-redux/releases/tag/v0.5.17) to its verified size and SHA-256.
+
 ## 1.3.0
 
 - Install and open the SHA-256-verified [PoB Redux v0.5.15 AppImage](https://github.com/pobredux/pob-redux/releases/tag/v0.5.15) for x86-64 from Tools.
