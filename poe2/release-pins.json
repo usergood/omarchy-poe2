@@ -12,9 +12,9 @@
     "sha256": "61f0af582af039609899c5c612b6a5785fd0368384b19aa0ef4bed8eca503d54"
   },
   "pob_redux": {
-    "tag": "v0.5.17",
-    "name": "PoB.Redux_0.5.17_amd64.AppImage",
-    "size": 156031480,
-    "sha256": "ed715339d12e5d75cd95b6bb3539c1966668da22b4b606c60c12a9cf528db5fb"
+    "tag": "v0.5.21",
+    "name": "PoB.Redux_0.5.21_amd64.AppImage",
+    "size": 156129784,
+    "sha256": "a837c0c75393ee54bfdc98cf857245c7a33a1ac7fb2cc51ce08746f24d1a42ca"
   }
 }

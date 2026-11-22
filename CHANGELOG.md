@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.2
+
+- Update PoB Redux from v0.5.17 to [v0.5.21](https://github.com/pobredux/pob-redux/releases/tag/v0.5.21).
+
 ## 1.3.1
 
 - Document AMD FSR 4.1 support for Radeon RX 6000, RX 7000 and RX 9000 cards in the README and plugin description.
