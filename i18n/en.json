@@ -1,5 +1,5 @@
 {
-  "title": "Path of Exile 2",
+  "title": "PoE 2 Companion",
   "loading": "Checking setup…",
   "original": "Original rendering",
   "fsr4": "FSR4 · DirectX 12",
@@ -57,7 +57,7 @@
   "working": "Working…",
   "done": "Done.",
   "error": "Could not read the addon response.",
-  "headerSubtitle": "Launcher & companion tools",
+  "headerSubtitle": "Launch, trade & graphics tools",
   "closePanel": "Close panel",
   "sessionHeading": "YOUR SESSION",
   "toolsHeading": "TOOLS & UPDATES",

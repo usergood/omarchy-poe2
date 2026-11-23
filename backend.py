@@ -16,7 +16,7 @@ from poe2 import steam
 
 
 def run(argv=None):
-    parser = argparse.ArgumentParser(description='Omarchy PoE 2 addon')
+    parser = argparse.ArgumentParser(description='PoE 2 Companion for Omarchy')
     sub = parser.add_subparsers(dest='action', required=True)
     for name in ['status', 'original', 'fsr4', 'repair', 'install-optiscaler', 'rollback', 'check-updates',
                  'install-scalpel', 'install-pob-redux', 'launch', 'launch-scalpel', 'launch-pob-redux',

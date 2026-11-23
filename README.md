@@ -1,4 +1,4 @@
-# Omarchy PoE 2
+# PoE 2 Companion
 
 Add **AMD FSR 4.1 upscaling** to Path of Exile 2 on Omarchy with the pinned
 OptiScaler preset. AMD Radeon **RX 6000**, **RX 7000**, and **RX 9000** series
