@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "usergood.poe2",
   "name": "PoE 2 Companion",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "author": "usergood",
   "license": "MIT",
   "description": "Add AMD FSR 4.1 upscaling to Path of Exile 2 on Radeon RX 6000, RX 7000 and RX 9000 GPUs. Includes game launch, trade, Scalpel and PoB Redux.",
