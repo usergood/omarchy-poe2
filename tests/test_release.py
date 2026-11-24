@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -13,6 +14,9 @@ with patch.object(sys, 'path', [str(SCRIPTS), *sys.path]):
 
 class ReleaseTests(unittest.TestCase):
     def setUp(self):
+        token = patch.dict(os.environ, GH_TOKEN='')
+        token.start()
+        self.addCleanup(token.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -89,6 +93,26 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(requests, 3)
         self.assertEqual(pins, updater.releases.PINS)
         self.assertEqual(release.metadata(self.root)[0], 'v1.1.0')
+
+    def test_workflow_uses_gh_for_metadata_and_verifies_asset_separately(self):
+        component = 'pob_redux'
+        metadata, payload = self.upstream('v99.3.0', component)
+        asset = metadata['assets'][0]
+
+        def download(url, size, destination):
+            destination.write_bytes(payload)
+            return len(payload)
+
+        with patch.dict(os.environ, GH_TOKEN='test-token'), \
+                patch.object(updater.subprocess, 'check_output', return_value=json.dumps(metadata).encode()) as gh, \
+                patch.object(updater.releases, 'fetch', side_effect=download) as fetch:
+            pin = updater.new_pin(component, updater.releases.PINS[component])
+
+        gh.assert_called_once_with(['gh', 'api', '--hostname', 'github.com',
+                                    'repos/pobredux/pob-redux/releases/latest'])
+        fetch.assert_called_once()
+        self.assertEqual(fetch.call_args.args[:2], (asset['browser_download_url'], len(payload)))
+        self.assertEqual(pin['sha256'], updater.digest(payload))
 
     def test_three_upstream_updates_create_one_patch_version(self):
         optiscaler = self.upstream('v99.1.0', 'optiscaler')
