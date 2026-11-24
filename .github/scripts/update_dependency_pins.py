@@ -1,7 +1,9 @@
 """Prepare a patch release when a managed tool has a newer stable release."""
 import json
+import os
 from pathlib import Path
 import re
+import subprocess
 import sys
 from tempfile import TemporaryDirectory
 
@@ -33,7 +35,15 @@ def version_key(tag):
 
 def new_pin(component, current):
     repo = releases.REPOS[component]
-    upstream = json.loads(releases.fetch(f'https://api.github.com/repos/{repo}/releases/latest', 2 * 1024 * 1024))
+    endpoint = f'repos/{repo}/releases/latest'
+    limit = 2 * 1024 * 1024
+    if os.environ.get('GH_TOKEN'):
+        data = subprocess.check_output(['gh', 'api', '--hostname', 'github.com', endpoint])
+        if len(data) > limit:
+            raise ValueError('Release metadata exceeds the allowed size.')
+    else:
+        data = releases.fetch(f'https://api.github.com/{endpoint}', limit)
+    upstream = json.loads(data)
     tag = upstream['tag_name']
     if upstream['draft'] or upstream['prerelease']:
         raise ValueError(f'{repo} did not return a published stable release.')
