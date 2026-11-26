@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.8
+
+- Update PoB Redux from v0.7.2 to [v0.7.3](https://github.com/pobredux/pob-redux/releases/tag/v0.7.3).
+
 ## 1.3.7
 
 - Update PoB Redux from v0.7.1 to [v0.7.2](https://github.com/pobredux/pob-redux/releases/tag/v0.7.2).
